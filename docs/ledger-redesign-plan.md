@@ -1,5 +1,7 @@
 # IFMS — trạng thái triển khai và phần việc còn lại của sổ cái
 
+> **Cập nhật 21/10/2026:** Tài liệu dưới đây giữ trạng thái lịch sử ngày 10/10. Xem [mục 9 của kế hoạch hoàn thiện](ledger-completion-and-excel-plan.md#9-nhật-ký-triển-khai-sau-khi-duyệt--cập-nhật-21102026) để biết code đã triển khai, kết quả kiểm chứng và việc còn lại.
+
 **Cập nhật:** 10/10/2026
 **Phạm vi:** Frontend financial-wallet-frontend và backend IFMS.
 **Trạng thái:** Đã bổ sung chức năng và tài liệu theo quyết định đã chốt. Chưa nghiệm thu chạy với database.
@@ -28,7 +30,7 @@ Trang thật /accountant/ledger hiện có bốn khu vực:
 
 Ở trang /wallet, nhân viên xem các khoản tạm ứng của chính mình và có thể nhập số tiền, ghi chú rồi hoàn tiền thật về ví dự án. Sau khi hoàn, trang tải lại số dư ví, lịch sử giao dịch và dư tạm ứng. Backend vẫn kiểm tra quyền sở hữu, số dư tạm ứng còn lại và số tiền khả dụng.
 
-Trang /accountant/ledger/demo vẫn là dữ liệu giả dùng để thuyết trình; dữ liệu thật nằm ở /accountant/ledger.
+Route `/accountant/ledger/demo` đã nghỉ dùng và chuyển về trang sổ cái thật. Phần còn lại của tài liệu này ghi trạng thái trước triển khai, không phải backlog hiện hành.
 
 ### Backend IFMS
 
@@ -60,7 +62,7 @@ API và giao diện không cộng các chỉ tiêu sau thành một số “đã
 - **Chi phí đã xác nhận:** số đang lưu ở project/phase/category totalSpent hoặc currentSpent; EXPENSE ghi khi xác nhận chứng từ và REIMBURSE ghi khi quyết toán.
 - **Đang khóa cho yêu cầu:** tổng reservedAmount của yêu cầu đã được duyệt hoặc đã xác nhận chứng từ.
 - **Tạm ứng còn mở:** tổng dư AdvanceBalance.remainingAmount.
-- **Số dư quỹ dự án:** giá trị đang lưu trên Project; khoản đang khóa và tạm ứng còn mở vẫn được hiển thị riêng.
+- **Số dư ví dự án:** lấy từ `Wallet.balance`; **ngân sách còn khả dụng:** lấy từ `Project.availableBudget`. Khoản đang khóa và tạm ứng còn mở hiển thị riêng.
 
 ADVANCE không được tính thành chi phí ngay khi giải ngân. Các chỉ tiêu là những góc nhìn khác nhau và không được cộng chồng lên nhau.
 

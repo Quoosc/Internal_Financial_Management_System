@@ -1,7 +1,12 @@
 # Sổ cái kế toán IFMS — tài liệu frontend
 
+> **Cập nhật 21/10/2026:** Các mô tả bên dưới là nền nghiệp vụ ngày 10/10. Xem [trạng thái triển khai mới nhất](ledger-completion-and-excel-plan.md#9-nhật-ký-triển-khai-sau-khi-duyệt--cập-nhật-21102026) cho migration, kỳ, đối chiếu, Excel và phần chưa nghiệm thu.
+
+> [Review bổ sung F01–F11](ledger-implementation-review.md) ghi các lỗi và khoảng
+> trống mới xác định trong code. Chưa coi triển khai là hoàn thành toàn bộ plan.
+
 **Cập nhật:** 10/10/2026
-**Trạng thái:** Giao diện thật đã nối các API sổ cái, ngân sách và hoàn tạm ứng. Frontend production build đạt; chưa kiểm tra end-to-end với database.
+**Trạng thái:** Giao diện thật đã nối API sổ cái, ngân sách, hoàn tạm ứng, mở sổ, đối chiếu, đóng kỳ và Excel. Đã kiểm tra kiểu frontend và integration backend trên database cô lập; chưa nghiệm thu UI sáu vai trò và database chính.
 
 ## Mục đích và bố cục
 
@@ -14,7 +19,7 @@ Trang /accountant/ledger có bốn khu vực độc lập:
 
 Trang /wallet cho nhân viên xem các khoản tạm ứng còn mở của chính mình và thực hiện hoàn tiền thật về ví dự án. Đây là một thao tác có chuyển tiền, khác với trang sổ cái kế toán vốn chỉ phục vụ tra cứu.
 
-Route /accountant/ledger/demo là trang minh họa dùng mock data. Route /accountant/ledger gọi API thật.
+Route `/accountant/ledger/demo` đã nghỉ dùng và chuyển về `/accountant/ledger`; các trang sổ cái đang hoạt động đọc API.
 
 ## Quy tắc nghiệp vụ thể hiện trên giao diện
 
@@ -72,7 +77,7 @@ Mỗi dự án/giai đoạn/danh mục trình bày riêng:
 - Chi phí đã xác nhận từ các bộ đếm ngân sách hiện có.
 - Tiền đang khóa cho các yêu cầu ở trạng thái được duyệt/chờ xử lý.
 - Tạm ứng còn mở lấy từ AdvanceBalance.
-- Số dư quỹ dự án theo dữ liệu Project; tiền đang khóa và tạm ứng còn mở hiển thị ở chỉ tiêu riêng.
+- Số dư ví dự án lấy từ `Wallet.balance`; ngân sách còn khả dụng lấy từ `Project.availableBudget`. Tiền đang khóa và tạm ứng còn mở hiển thị ở chỉ tiêu riêng.
 
 Không cộng các khoản trên thành “đã chi”. Đặc biệt, tạm ứng chưa quyết toán không tự thành chi phí; khoản EXPENSE chờ thanh toán đã ghi chi phí khi xác nhận chứng từ.
 
@@ -80,6 +85,6 @@ Không cộng các khoản trên thành “đã chi”. Đặc biệt, tạm ứ
 
 - Journal cho SYSTEM_TOPUP, DEPARTMENT_ALLOCATION và PROJECT_ALLOCATION sử dụng tài khoản quản trị nội bộ IFMS. Mapping cần GVHD/người phụ trách duyệt; chưa phải bộ tài khoản pháp định.
 - Giao dịch lịch sử chỉ được backfill khi có chứng từ và đối chiếu đủ căn cứ.
-- Ngày ghi sổ hiện dùng ngày backend xử lý và kỳ suy ra theo tháng.
-- Database hiện chặn sửa/xóa journal; giao diện chưa có đóng kỳ hoặc luồng đảo/điều chỉnh. Cần chốt ngày/kỳ ghi đảo và quyền xử lý trước khi mở chức năng sửa sai.
-- Frontend build thành công ngày 10/10/2026. Chưa kiểm tra runtime với database hoặc test API/end-to-end.
+- Ngày nghiệp vụ và ngày ghi sổ được lưu riêng; journal được ghi vào kỳ ứng với ngày ghi sổ. Kỳ đã đóng từ chối bút toán mới.
+- Journal đã ghi không được sửa/xóa. Sửa sai bằng bút toán đảo toàn phần có liên kết và chống đảo trùng; dữ liệu nguồn/counter chỉ cập nhật qua quy trình tương ứng.
+- Đã kiểm tra production build frontend và integration backend trên PostgreSQL cô lập. Chưa nghiệm thu database triển khai chính hoặc browser flow đủ sáu vai trò; xem [kế hoạch hoàn thiện](ledger-completion-and-excel-plan.md).

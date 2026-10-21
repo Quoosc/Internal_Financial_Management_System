@@ -51,5 +51,6 @@ docs/*
 !docs/PROGRESS.md
 !docs/ledger-accounting.md
 !docs/ledger-redesign-plan.md
+!docs/ledger-completion-and-excel-plan.md
 logs/
 test-results/
