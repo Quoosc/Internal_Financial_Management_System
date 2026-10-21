@@ -33,6 +33,8 @@ export default function AdminSystemFundPage() {
   const [topupDescription, setTopupDescription] = useState("");
   const [topupReferenceCode, setTopupReferenceCode] = useState("");
   const [statementBalance, setStatementBalance] = useState("");
+  const [statementTime, setStatementTime] = useState("");
+  const [statementEvidence, setStatementEvidence] = useState("");
 
   const [topupSubmitting, setTopupSubmitting] = useState(false);
   const [statementSubmitting, setStatementSubmitting] = useState(false);
@@ -68,6 +70,7 @@ export default function AdminSystemFundPage() {
   }, [canManageFund, loadData]);
 
   const handleTopup = async () => {
+    if (!topupReferenceCode.trim()) { toast.error("Cần nhập mã chứng từ/chuyển khoản ngân hàng."); return; }
     const amount = Number(topupAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
       toast.error("Số tiền nạp không hợp lệ.");
@@ -106,12 +109,14 @@ export default function AdminSystemFundPage() {
       return;
     }
 
+    if (!statementTime || !statementEvidence.trim()) { toast.error("Cần thời điểm chốt và mã/tài liệu sao kê."); return; }
     setStatementSubmitting(true);
 
     try {
       await updateBankStatement({
         externalBankBalance: bankBalance,
-        lastStatementDate: new Date().toISOString().slice(0, 10),
+        lastStatementDate: statementTime.slice(0, 10),
+        asOf: new Date(statementTime).toISOString(), evidenceRef: statementEvidence.trim(),
       });
       setShowStatementModal(false);
       toast.success("Đã cập nhật số dư ngân hàng.");
@@ -137,7 +142,7 @@ export default function AdminSystemFundPage() {
     return raw.entries ?? [];
   }, [reconciliation]);
   const discrepancy = companyFund?.bankDiscrepancy ?? 0;
-  const reconciled = Math.abs(discrepancy) === 0;
+  const reconciled = companyFund?.bankDiscrepancy != null && Math.abs(discrepancy) === 0;
 
   if (!canManageFund) {
     return (
@@ -208,6 +213,7 @@ export default function AdminSystemFundPage() {
         </div>
       </div>
 
+      <a href={canManageFund ? "/accountant/ledger/reconciliation" : "#"} className="inline-flex rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">Đối soát sao kê và xác nhận phạm vi tài khoản →</a>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
           title="Số dư hệ thống"
@@ -221,7 +227,7 @@ export default function AdminSystemFundPage() {
         />
         <StatCard
           title="Chênh lệch đối soát"
-          value={formatCurrency(companyFund?.bankDiscrepancy ?? 0)}
+          value={companyFund?.bankDiscrepancy != null ? formatCurrency(companyFund.bankDiscrepancy) : "Thiếu căn cứ"}
           tone={Math.abs(companyFund?.bankDiscrepancy ?? 0) > 0 ? "text-rose-700" : "text-emerald-700"}
         />
       </div>
@@ -229,13 +235,13 @@ export default function AdminSystemFundPage() {
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 bg-blue-50/50 px-5 py-4">
           <h2 className="text-base font-bold text-slate-900">Báo cáo đối soát</h2>
-          <p className="mt-1 text-sm text-slate-500">So sánh số dư ví hệ thống với số dư ngân hàng được cập nhật gần nhất.</p>
+          <p className="mt-1 text-sm text-slate-500">Đối chiếu tiền công ty (quỹ, phòng ban, dự án) tại thời điểm sao kê; không cộng ví USER. Phân bổ nội bộ không làm đổi tổng tiền công ty.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-5">
           <InfoRow
             label="Số dư IFMS"
-            value={formatCurrency(reconciliation?.companyFundBalance ?? 0)}
+            value={reconciliation?.corporateBalanceAtStatement != null ? formatCurrency(reconciliation.corporateBalanceAtStatement) : "Chưa có thời điểm chốt"}
           />
           <InfoRow
             label="Số dư ngân hàng"
@@ -243,7 +249,7 @@ export default function AdminSystemFundPage() {
           />
           <InfoRow
             label="Chênh lệch đối soát"
-            value={formatCurrency(reconciliation?.bankDiscrepancy ?? 0)}
+            value={reconciliation?.bankDiscrepancy != null ? formatCurrency(reconciliation.bankDiscrepancy) : "Thiếu căn cứ"}
           />
           <InfoRow
             label="Lần đối soát gần nhất"
@@ -341,6 +347,9 @@ export default function AdminSystemFundPage() {
         }
       >
         <div>
+          <p className="mb-4 text-xs text-slate-500">Trước khi cập nhật, xác nhận tài khoản tiền vận hành công ty tại trang Đối soát ngân hàng.</p>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Thời điểm chốt sao kê<input type="datetime-local" className="mt-2 block w-full rounded-xl border border-slate-200 p-3" value={statementTime} onChange={e => setStatementTime(e.target.value)} /></label>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Mã / tài liệu sao kê<input className="mt-2 block w-full rounded-xl border border-slate-200 p-3" value={statementEvidence} onChange={e => setStatementEvidence(e.target.value)} /></label>
           <label className="mb-2 block text-sm font-semibold text-slate-700">Số dư ngân hàng thực tế</label>
           <CurrencyInput
             value={statementBalance ? Number(statementBalance.replace(/\D/g, "")) : null}

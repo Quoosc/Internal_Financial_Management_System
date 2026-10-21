@@ -293,7 +293,8 @@ function summarizeChange(log: AuditLogResponse): string {
 }
 
 function normalizeCsvValue(value: string): string {
-  return `"${value.replace(/"/g, '""')}"`;
+  const safe = /^[=+\-@\t\r]/.test(value) ? "'" + value : value;
+  return `"${safe.replace(/"/g, '""')}"`;
 }
 
 export default function AuditLogsPage() {

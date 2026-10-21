@@ -75,6 +75,7 @@ export interface DisbursementDetailResponse {
 
 /** POST /accountant/disbursements/:id/disburse — body */
 export interface DisburseBody {
+  documents?: { fileId: number; issuerCode: string; documentNumber: string; documentDate: string; totalAmount: number; allocatedAmount: number }[];
   pin: string;
   note?: string;
 }

@@ -295,6 +295,7 @@ function getNavGroups(role: RoleName | undefined): NavGroup[] {
     { label: "Tổng quan", href: "/dashboard", icon: icons.dashboard },
     { label: "Ví của tôi", href: "/wallet", icon: icons.wallet },
     { label: "Hồ sơ cá nhân", href: "/profile", icon: icons.profile },
+    { label: "Nhập / xuất Excel", href: "/data-exchange", icon: icons.auditLogs },
   ];
   const notifications: NavItem = {
     label: "Thông báo",

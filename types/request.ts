@@ -33,6 +33,7 @@ export enum RequestType {
  *   PENDING → APPROVED_BY_CFO → PAID (auto)
  */
 export enum RequestStatus {
+  REVERSED = "REVERSED",
   PENDING = "PENDING",
   APPROVED_BY_TEAM_LEADER = "APPROVED_BY_TEAM_LEADER",
   ACCOUNTANT_VERIFIED = "ACCOUNTANT_VERIFIED",
@@ -48,6 +49,7 @@ export enum RequestStatus {
  * KHÔNG có ESCALATE
  */
 export enum RequestAction {
+  REVERSE = "REVERSE",
   APPROVE = "APPROVE",
   REJECT = "REJECT",
   VERIFY = "VERIFY",
@@ -148,7 +150,6 @@ export interface AdvanceBalanceItem {
   status: "OUTSTANDING" | "PARTIALLY_SETTLED";
   // Dự án / phase / hạng mục của request tạm ứng gốc — dùng để tự điền form quyết toán
   projectId?: number | null;
-  projectName?: string | null;
   phaseId?: number | null;
   phaseName?: string | null;
   categoryId?: number | null;

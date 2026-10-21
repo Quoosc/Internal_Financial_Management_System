@@ -29,6 +29,7 @@ const BREADCRUMB_MAP: Record<string, string[]> = {
   "/accountant/disbursements": ["Kế toán", "Giải ngân"],
   "/accountant/payroll": ["Kế toán", "Bảng lương"],
   "/accountant/payslips": ["Kế toán", "Phiếu lương"],
+  "/data-exchange": ["IFMS", "Nhập / xuất Excel"],
   "/accountant/ledger": ["Kế toán", "Sổ cái"],
   "/accountant/withdrawals": ["Kế toán", "Rút tiền"],
   "/accountant/system-fund": ["Kế toán", "Quỹ hệ thống"],

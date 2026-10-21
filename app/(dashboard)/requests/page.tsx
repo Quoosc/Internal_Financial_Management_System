@@ -32,6 +32,7 @@ const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
   [RequestStatus.PAID]: "Đã xử lý",
   [RequestStatus.REJECTED]: "Từ chối",
   [RequestStatus.CANCELLED]: "Đã hủy",
+  [RequestStatus.REVERSED]: "Đã đảo nghiệp vụ",
 };
 
 const REQUEST_TYPE_LABELS: Record<RequestType, string> = {

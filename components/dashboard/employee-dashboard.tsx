@@ -144,6 +144,7 @@ const REQUEST_STATUS_CONFIG: Record<
   [RequestStatus.PAID]: { label: "Đã xử lý", cls: "text-emerald-700" },
   [RequestStatus.REJECTED]: { label: "Từ chối", cls: "text-rose-700" },
   [RequestStatus.CANCELLED]: { label: "Đã hủy", cls: "text-slate-500" },
+  [RequestStatus.REVERSED]: { label: "Đã đảo nghiệp vụ", cls: "text-rose-700" },
 };
 
 

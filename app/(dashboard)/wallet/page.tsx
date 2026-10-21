@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useWallet } from "@/contexts/wallet-context";
 import { ApiError, api } from "@/lib/api-client";
 import { formatCurrency, formatDateTime } from "@/lib/format";
@@ -100,6 +100,7 @@ export default function WalletPage() {
     void loadAdvanceBalances();
   }, [fetchWallet, loadAdvanceBalances, loadRecentTransactions]);
 
+  const returnOperation = useRef<{ payload: string; key: string } | null>(null);
   async function handleAdvanceReturn() {
     if (!selectedAdvance) return;
     const amount = Number(returnAmount);
@@ -117,14 +118,17 @@ export default function WalletPage() {
       return;
     }
 
+    const payload = JSON.stringify([selectedAdvance.id, amount, returnNote.trim()]);
+    if (returnOperation.current?.payload !== payload) returnOperation.current = { payload, key: crypto.randomUUID() };
     setReturnSubmitting(true);
     setReturnError(null);
     try {
       const response = await api.post<AdvanceReturnResponse>(
         "/api/v1/requests/my-advance-balances/" + selectedAdvance.id + "/return",
-        { amount, note: returnNote.trim() || undefined },
+        { amount, note: returnNote.trim() || undefined, idempotencyKey: returnOperation.current.key },
       );
       toast.success("Đã hoàn " + formatCurrency(response.data.returnedAmount) + " về quỹ dự án. Mã giao dịch: " + response.data.transactionCode);
+      returnOperation.current = null;
       setSelectedAdvance(null);
       setReturnAmount("");
       setReturnNote("");

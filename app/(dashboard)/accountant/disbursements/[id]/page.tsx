@@ -1,4 +1,5 @@
 "use client";
+import { FinancialDocumentEditor, type DocumentVerificationDraft, validDocumentAllocation, verifiedDocumentPayload } from "@/components/accounting/financial-document-editor";
 
 import Link from "next/link";
 import React, { use, useEffect, useMemo, useState } from "react";
@@ -145,6 +146,11 @@ export default function AccountantDisbursementDetailPage({
     approvalChainComplete: false,
   });
 
+  const [documentDrafts, setDocumentDrafts] = useState<DocumentVerificationDraft[]>([]);
+  useEffect(() => {
+    setDocumentDrafts((detail?.attachments || []).map(file => ({ fileId: file.fileId, fileName: file.fileName,
+      issuerCode: "", documentNumber: "", documentDate: "", totalAmount: null, allocatedAmount: null })));
+  }, [detail]);
   const [pin, setPin] = useState("");
   const [disburseNote, setDisburseNote] = useState("");
   const [pinError, setPinError] = useState<string | null>(null);
@@ -282,6 +288,10 @@ export default function AccountantDisbursementDetailPage({
       return;
     }
 
+    if (detail && !isVerifiedExpenseWaitingForPayment && (detail.type === "EXPENSE" || detail.type === "REIMBURSE")
+        && !validDocumentAllocation(documentDrafts, detail.approvedAmount ?? detail.amount)) {
+      setPinError("Cần nhập đủ thông tin chứng từ và phân bổ đúng tổng tiền được duyệt."); return;
+    }
     if (pin.length < 5) {
       setPinError("Vui lòng nhập đủ 5 chữ số PIN.");
       return;
@@ -310,6 +320,7 @@ export default function AccountantDisbursementDetailPage({
       const body: DisburseBody = {
         pin,
         note: disburseNote.trim() || undefined,
+        documents: isVerifiedExpenseWaitingForPayment ? undefined : verifiedDocumentPayload(documentDrafts),
       };
       const actionPath = isVerifiedExpenseWaitingForPayment ? "pay" : "disburse";
       const res = await api.post<DisburseResponse>(
@@ -620,6 +631,7 @@ export default function AccountantDisbursementDetailPage({
         </div>
 
         <div className="flex flex-col gap-6 xl:sticky xl:top-6 xl:self-start">
+          {!isVerifiedExpenseWaitingForPayment && (detail.type === "EXPENSE" || detail.type === "REIMBURSE") && <FinancialDocumentEditor documents={documentDrafts} amount={detail.approvedAmount ?? detail.amount} onChange={setDocumentDrafts} />}
           <div className="order-2 rounded-3xl border border-slate-200 bg-white p-5 space-y-4">
             <h2 className="text-lg font-semibold text-slate-900">
               Chứng từ đính kèm

@@ -37,16 +37,6 @@ function recalcNet(entry: Pick<PayrollEntry, "baseSalary" | "bonus" | "allowance
   return Math.max(0, entry.baseSalary + entry.bonus + entry.allowance - entry.deduction - entry.advanceDeduct);
 }
 
-function applyNetting(entries: PayrollEntry[], netting: AutoNettingResponse): PayrollEntry[] {
-  const map = new Map(netting.summary.map((x) => [x.userId, x]));
-  return entries.map((entry) => {
-    const s = map.get(entry.userId);
-    if (!s) return entry;
-    const advanceDeduct = s.deductedAmount;
-    return { ...entry, advanceDeduct, finalNetSalary: recalcNet({ ...entry, advanceDeduct }) };
-  });
-}
-
 function getStepDescription(step: 1 | 2 | 3 | 4): string {
   switch (step) {
     case 1:
@@ -115,7 +105,7 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
   }, [id, toast]);
 
   const hasEntries = (period?.entries.length ?? 0) > 0;
-  const hasNetting = Boolean(nettingResult);
+  const hasNetting = period?.nettingApplied === true;
   const isCompleted = period?.status === PayrollStatus.COMPLETED;
   const netTotal = useMemo(() => sumNet(period?.entries ?? []), [period?.entries]);
   const totalEmployees = period?.entries.length ?? 0;
@@ -140,98 +130,6 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
   const closeEdit = () => {
     setEditingEntry(null);
     setEntryError(null);
-  };
-
-  const runImport = async (overwrite = false) => {
-    if (!period || !selectedFile) return;
-    setUploading(true);
-    try {
-      if (overwrite) {
-        await api.post<string>(`/api/v1/accountant/payroll/${period.id}/confirm-overwrite`);
-      }
-
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      const res = await api.post<PayrollImportResponse>(
-        `/api/v1/accountant/payroll/${period.id}/import`,
-        formData,
-        { headers: {} }  // let browser set Content-Type with boundary
-      );
-      const result = res.data;
-      setImportResult(result);
-
-      const entries: PayrollEntry[] = result.entries
-        .filter((e) => e.importStatus === "ok" && e.id !== null)
-        .map((e) => ({
-          id: e.id as number,
-          payslipCode: e.payslipCode ?? "",
-          userId: e.userId as number,
-          fullName: e.fullName,
-          avatar: null,
-          employeeCode: e.employeeCode,
-          jobTitle: null,
-          baseSalary: e.baseSalary,
-          bonus: e.bonus,
-          allowance: e.allowance,
-          deduction: e.deduction,
-          advanceDeduct: e.advanceDeduct,
-          finalNetSalary: e.finalNetSalary,
-          status: (e.status as PayslipStatus) ?? PayslipStatus.DRAFT,
-        }));
-
-      setPeriod((prev) =>
-        prev
-          ? { ...prev, status: PayrollStatus.DRAFT, employeeCount: entries.length, totalNetPayroll: sumNet(entries), entries, updatedAt: new Date().toISOString() }
-          : prev
-      );
-      setNettingResult(null);
-      setRunResult(null);
-      setActiveStep(2);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        // Period already has entries — ask for overwrite confirmation
-        setConfirmState({
-          open: true,
-          message: "Kỳ lương đã có dữ liệu. Bạn có muốn xóa dữ liệu cũ và nhập lại từ file mới?",
-          onConfirm: () => {
-            setConfirmState((prev) => ({ ...prev, open: false }));
-            void runImport(true);
-          },
-        });
-      } else {
-        toast.error(err instanceof ApiError ? err.apiMessage : "Nhập dữ liệu lương thất bại.");
-      }
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleFileSelect = (file: File | null) => {
-    setSelectedFile(file);
-    setImportResult(null);
-  };
-
-  const handleGoToReview = () => {
-    if (hasEntries) {
-      setActiveStep(2);
-      return;
-    }
-
-    if (selectedFile) {
-      void runImport(false);
-    }
-  };
-
-  const handleDownloadTemplate = async () => {
-    setDownloadingTemplate(true);
-
-    try {
-      await downloadFile("/api/v1/accountant/payroll/template", "payroll_template.xlsx");
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.apiMessage : "Không thể tải file mẫu Excel.");
-    } finally {
-      setDownloadingTemplate(false);
-    }
   };
 
   const handleSaveEntry = async () => {
@@ -266,7 +164,7 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
       setPeriod((prev) => {
         if (!prev) return prev;
         const entries = prev.entries.map((e) => (e.id === editingEntry.id ? res.data : e));
-        return { ...prev, entries, totalNetPayroll: sumNet(entries), updatedAt: new Date().toISOString() };
+        return { ...prev, entries, nettingApplied: false, totalNetPayroll: sumNet(entries) };
       });
     } catch {
       // Optimistic update on error
@@ -277,7 +175,7 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
             ? { ...e, baseSalary: nextBase, bonus: nextBonus, allowance: nextAllowance, deduction: nextDeduction, advanceDeduct: nextAdvance, finalNetSalary: recalcNet({ baseSalary: nextBase, bonus: nextBonus, allowance: nextAllowance, deduction: nextDeduction, advanceDeduct: nextAdvance }) }
             : e
         );
-        return { ...prev, entries, totalNetPayroll: sumNet(entries), updatedAt: new Date().toISOString() };
+        return { ...prev, entries, nettingApplied: false, totalNetPayroll: sumNet(entries) };
       });
     } finally {
       setUploading(false);
@@ -291,8 +189,7 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
 
     try {
       const res = await api.post<AutoNettingResponse>(`/api/v1/accountant/payroll/${period.id}/auto-netting`);
-      const entries = applyNetting(period.entries, res.data);
-      setPeriod((prev) => (prev ? { ...prev, entries, totalNetPayroll: sumNet(entries), updatedAt: new Date().toISOString() } : prev));
+      setPeriod((await api.get<PayrollDetailResponse>(`/api/v1/accountant/payroll/${period.id}`)).data);
       setNettingResult(res.data);
       setActiveStep(3);
     } catch (err) {
@@ -309,9 +206,7 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
     try {
       const res = await api.post<PayrollRunResponse>(`/api/v1/accountant/payroll/${period.id}/run`);
       setRunResult(res.data);
-      setPeriod((prev) =>
-        prev ? { ...prev, status: PayrollStatus.COMPLETED, totalNetPayroll: res.data.totalNetPayroll, updatedAt: new Date().toISOString() } : prev
-      );
+      setPeriod((await api.get<PayrollDetailResponse>(`/api/v1/accountant/payroll/${period.id}`)).data);
       setActiveStep(4);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.apiMessage : "Chi lương thất bại.");
@@ -428,86 +323,12 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Step 1: Nhap Excel */}
-      {activeStep === 1 && (
-        <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-5 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Bước 1: Nhập bảng lương từ Excel</h2>
-              <p className="mt-1 text-sm text-slate-500">{getStepDescription(1)}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void handleDownloadTemplate()}
-              disabled={downloadingTemplate}
-              className="inline-flex items-center gap-1.5 text-sm text-blue-700 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v13m0 0l-4-4m4 4l4-4M4 20h16" />
-              </svg>
-              {downloadingTemplate ? "Đang tải..." : "Tải file mẫu Excel"}
-            </button>
-          </div>
+      {activeStep === 1 && <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-bold text-slate-900">Nhập bảng lương qua Excel</h2>
+        <p className="text-sm leading-6 text-slate-600">T?i m?u ??ng k?, xem tr??c c?c d?ng v? x?c nh?n to?n l? ? trang Nhập / xuất Excel. File sai kh?ng x?a d? li?u ?ang c?. Ch? k? nh?p ???c ph?p thay th?.</p>
+        <div className="flex flex-wrap gap-3"><Link href={`/data-exchange?dataset=payroll&scope=${id}`} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white">Mở nhập / xuất bảng lương</Link>{hasEntries && <button onClick={() => setActiveStep(2)} className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-blue-700">Xem bảng lương hiện có</button>}</div>
+      </section>}
 
-          <label
-            className="block rounded-3xl border border-dashed border-blue-200 bg-blue-50/40 p-8 text-center cursor-pointer hover:border-blue-400/70 transition-colors"
-            onDragOver={(event) => {
-              event.preventDefault();
-              event.dataTransfer.dropEffect = "copy";
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              handleFileSelect(event.dataTransfer.files?.[0] ?? null);
-            }}
-          >
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              className="hidden"
-              onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
-            />
-            <p className="text-sm font-semibold text-slate-900">Chọn file bảng lương Excel</p>
-            <p className="mt-1 text-sm text-slate-600">Kéo thả hoặc bấm để chọn file `.xlsx` / `.xls` đã điền theo file mẫu.</p>
-            <p className="text-xs text-slate-500 mt-2">
-              {selectedFile ? `Đã chọn: ${selectedFile.name}` : "Chưa có file nào được chọn"}
-            </p>
-          </label>
-
-          {importResult && (
-            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-slate-900">Kết quả nhập dữ liệu</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <SummaryStat label="Tổng dòng" value={String(importResult.totalRows)} />
-                <SummaryStat label="Thành công" value={String(importResult.successCount)} tone="text-emerald-700" />
-                <SummaryStat label="Lỗi" value={String(importResult.errorCount)} tone={importResult.errorCount > 0 ? "text-rose-700" : undefined} />
-                <SummaryStat label="Tổng thực lĩnh" value={formatCurrency(importResult.totalNetPayroll)} />
-              </div>
-              {importResult.errors.length > 0 && (
-                <div className="space-y-1">
-                  {importResult.errors.map((err, i) => (
-                    <p key={i} className="text-xs text-rose-700">
-                      Dòng {err.row} — {err.field}: {err.message}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={handleGoToReview}
-              disabled={(!hasEntries && !selectedFile) || uploading}
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold"
-            >
-              {uploading ? "Đang nhập dữ liệu..." : "Sang bước rà soát"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 2: Review entries */}
       {activeStep === 2 && (
         <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-5 space-y-4">
           <div>
@@ -680,7 +501,7 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
           ) : (
             <>
               <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700 text-sm">
-                Sau khi xác nhận, hệ thống sẽ trừ tiền từ quỹ hệ thống và cộng lương vào ví của {totalEmployees} nhân viên. Thao tác này không thể hoàn tác.
+                Sau khi xác nhận, hệ thống sẽ trừ tiền từ quỹ hệ thống và cộng lương vào ví của {totalEmployees} nhân viên. Phiếu đã chi được giữ nguyên lịch sử; sửa sai qua bút toán đảo có lý do.
               </div>
               <button
                 type="button"
@@ -760,7 +581,7 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
               <span className="font-semibold text-slate-900">{totalEmployees} nhân viên</span> với tổng số tiền{" "}
               <span className="font-semibold text-emerald-700">{formatCurrency(netTotal)}</span>.
             </p>
-            <p className="text-sm text-rose-700">Thao tác này không thể hoàn tác.</p>
+            <p className="text-sm text-rose-700">Phiếu đã chi được giữ nguyên lịch sử; sửa sai qua bút toán đảo có lý do.</p>
             <div className="flex items-center justify-end gap-3">
               <button type="button" onClick={() => setShowRunConfirm(false)} className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm">
                 Hủy
