@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import Link from "next/link";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useRouter } from "next/navigation";
 import { ApiError, api } from "@/lib/api-client";
 import { useToast } from "@/contexts/toast-context";
@@ -27,7 +29,7 @@ const transactionStatuses = Object.values(TransactionStatus);
 const referenceTypes = Object.values(ReferenceType);
 const journalEvents: AccountingJournalEvent[] = [
   "ADVANCE_DISBURSED", "EXPENSE_VERIFIED", "EXPENSE_PAID", "REIMBURSE_SETTLED", "ADVANCE_RETURNED", "PAYROLL_SETTLEMENT",
-  "SYSTEM_TOPUP", "DEPARTMENT_ALLOCATION", "PROJECT_ALLOCATION",
+  "SYSTEM_TOPUP", "DEPARTMENT_ALLOCATION", "PROJECT_ALLOCATION", "REVERSAL", "OPENING_BALANCE",
 ];
 
 const transactionLabels: Record<string, string> = {
@@ -53,6 +55,8 @@ const eventLabels: Record<AccountingJournalEvent, string> = {
   SYSTEM_TOPUP: "Nạp quỹ công ty",
   DEPARTMENT_ALLOCATION: "Cấp ngân sách phòng ban",
   PROJECT_ALLOCATION: "Cấp vốn dự án",
+  REVERSAL: "Đảo nghiệp vụ đã ghi",
+  OPENING_BALANCE: "Mở sổ có chứng từ",
 };
 
 const referenceLabels: Record<string, string> = {
@@ -120,6 +124,36 @@ export default function AccountantLedgerPage() {
   const [journalRequestId, setJournalRequestId] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [reload, setReload] = useState(0);
+  const requestEpoch = useRef(0);
+
+  useEffect(() => {
+    const restore = () => {
+      const params = new URLSearchParams(window.location.search);
+      const requested = params.get("tab");
+      setTab(requested && ["wallet", "journal", "advances", "budget"].includes(requested) ? requested as LedgerTab : "wallet");
+      setType(params.get("type") || ""); setStatus(params.get("status") || "");
+      setReferenceType(params.get("referenceType") || ""); setEvent(params.get("event") || "");
+      setFrom(params.get("from") || ""); setTo(params.get("to") || "");
+      setJournalEmployeeId(params.get("employeeId") || ""); setJournalProjectId(params.get("projectId") || "");
+      setJournalRequestId(params.get("requestId") || "");
+      setPage(Math.max(1, Number(params.get("page")) || 1));
+      setReady(true);
+    };
+    restore();
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    const params = new URLSearchParams({ tab, page: String(page) });
+    Object.entries({ type, status, referenceType, event, from, to, employeeId: journalEmployeeId,
+      projectId: journalProjectId, requestId: journalRequestId }).forEach(([key, value]) => { if (value) params.set(key, value); });
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params}`);
+  }, [ready, tab, page, type, status, referenceType, event, from, to, journalEmployeeId, journalProjectId, journalRequestId]);
   const [walletSummary, setWalletSummary] = useState<LedgerSummaryResponse | null>(null);
   const [walletRows, setWalletRows] = useState<AccountantWalletTransactionResponse[]>([]);
   const [journalRows, setJournalRows] = useState<AccountingJournalItem[]>([]);
@@ -131,7 +165,9 @@ export default function AccountantLedgerPage() {
   const [expandedBudgetProject, setExpandedBudgetProject] = useState<number | null>(null);
 
   const loadWallet = useCallback(async () => {
-    setLoading(true);
+    const epoch = ++requestEpoch.current;
+    setLoading(true); setLoadError(null); setTotal(0); setTotalPages(1);
+    setWalletSummary(null); setWalletRows([]); setJournalRows([]); setAdvanceRows([]); setBudgetRows([]);
     const filters = { type, status, referenceType, event, from, to };
     try {
       const query = addFilters(new URLSearchParams(), filters);
@@ -142,22 +178,28 @@ export default function AccountantLedgerPage() {
         api.get<PaginatedResponse<AccountantWalletTransactionResponse>>(`/api/v1/accountant/ledger/wallet-transactions?${query}`),
         api.get<LedgerSummaryResponse>(`/api/v1/accountant/ledger/summary?${summaryQuery}`),
       ]);
+      if (epoch !== requestEpoch.current) return;
       const result = getPage(listResponse.data);
       setWalletRows(result.items);
       setTotal(result.total);
       setTotalPages(result.totalPages);
       setWalletSummary(summaryResponse.data);
     } catch (error) {
+      if (epoch !== requestEpoch.current) return;
+      setLoadError(error instanceof ApiError ? error.apiMessage : "Không tải được dữ liệu. Vui lòng thử lại.");
+      setTotal(0); setTotalPages(1);
       setWalletRows([]);
       setWalletSummary(null);
       toast.error(error instanceof ApiError ? error.apiMessage : "Không tải được giao dịch ví.");
     } finally {
-      setLoading(false);
+      if (epoch === requestEpoch.current) setLoading(false);
     }
   }, [event, from, page, referenceType, status, to, toast, type]);
 
   const loadJournals = useCallback(async () => {
-    setLoading(true);
+    const epoch = ++requestEpoch.current;
+    setLoading(true); setLoadError(null); setTotal(0); setTotalPages(1);
+    setWalletSummary(null); setWalletRows([]); setJournalRows([]); setAdvanceRows([]); setBudgetRows([]);
     try {
       const query = addFilters(new URLSearchParams(), { type: "", status: "", referenceType: "", event, from, to });
       if (journalEmployeeId) query.set("employeeId", journalEmployeeId);
@@ -166,50 +208,68 @@ export default function AccountantLedgerPage() {
       query.set("page", String(page));
       query.set("limit", String(PAGE_SIZE));
       const response = await api.get<PaginatedResponse<AccountingJournalItem>>(`/api/v1/accountant/ledger/journals?${query}`);
+      if (epoch !== requestEpoch.current) return;
       const result = getPage(response.data);
       setJournalRows(result.items);
       setTotal(result.total);
       setTotalPages(result.totalPages);
     } catch (error) {
+      if (epoch !== requestEpoch.current) return;
+      setLoadError(error instanceof ApiError ? error.apiMessage : "Không tải được dữ liệu. Vui lòng thử lại.");
+      setTotal(0); setTotalPages(1);
       setJournalRows([]);
       toast.error(error instanceof ApiError ? error.apiMessage : "Không tải được sổ cái kế toán.");
     } finally {
-      setLoading(false);
+      if (epoch === requestEpoch.current) setLoading(false);
     }
   }, [event, from, journalEmployeeId, journalProjectId, journalRequestId, page, to, toast]);
 
   const loadAdvances = useCallback(async () => {
-    setLoading(true);
+    const epoch = ++requestEpoch.current;
+    setLoading(true); setLoadError(null); setTotal(0); setTotalPages(1);
+    setWalletSummary(null); setWalletRows([]); setJournalRows([]); setAdvanceRows([]); setBudgetRows([]);
     try {
       const response = await api.get<AdvanceEmployeeSummary[]>("/api/v1/accountant/ledger/advances/outstanding");
+      if (epoch !== requestEpoch.current) return;
       setAdvanceRows(response.data ?? []);
     } catch (error) {
+      if (epoch !== requestEpoch.current) return;
+      setLoadError(error instanceof ApiError ? error.apiMessage : "Không tải được dữ liệu. Vui lòng thử lại.");
+      setTotal(0); setTotalPages(1);
       setAdvanceRows([]);
       toast.error(error instanceof ApiError ? error.apiMessage : "Không tải được các khoản tạm ứng còn mở.");
     } finally {
-      setLoading(false);
+      if (epoch === requestEpoch.current) setLoading(false);
     }
   }, [toast]);
 
   const loadBudgetExposure = useCallback(async () => {
-    setLoading(true);
+    const epoch = ++requestEpoch.current;
+    setLoading(true); setLoadError(null); setTotal(0); setTotalPages(1);
+    setWalletSummary(null); setWalletRows([]); setJournalRows([]); setAdvanceRows([]); setBudgetRows([]);
     try {
       const response = await api.get<LedgerProjectBudget[]>("/api/v1/accountant/ledger/budget-exposure");
+      if (epoch !== requestEpoch.current) return;
       setBudgetRows(response.data ?? []);
     } catch (error) {
+      if (epoch !== requestEpoch.current) return;
+      setLoadError(error instanceof ApiError ? error.apiMessage : "Không tải được dữ liệu. Vui lòng thử lại.");
+      setTotal(0); setTotalPages(1);
       setBudgetRows([]);
       toast.error(error instanceof ApiError ? error.apiMessage : "Không tải được tổng hợp ngân sách dự án.");
     } finally {
-      setLoading(false);
+      if (epoch === requestEpoch.current) setLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
+    if (!ready) return;
     if (tab === "wallet") void loadWallet();
     if (tab === "journal") void loadJournals();
     if (tab === "advances") void loadAdvances();
     if (tab === "budget") void loadBudgetExposure();
-  }, [tab, loadWallet, loadJournals, loadAdvances, loadBudgetExposure]);
+    return () => { requestEpoch.current++; };
+  }, [ready, reload, tab, loadWallet, loadJournals, loadAdvances, loadBudgetExposure]);
 
   const setTabAndReset = (next: LedgerTab) => {
     setPage(1);
@@ -239,6 +299,11 @@ export default function AccountantLedgerPage() {
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
         <TabButton active={tab === "wallet"} onClick={() => setTabAndReset("wallet")}>Giao dịch ví</TabButton>
         <TabButton active={tab === "journal"} onClick={() => setTabAndReset("journal")}>Sổ cái kế toán</TabButton>
+        <Link href="/accountant/ledger/accounts" className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-700">Sổ theo tài khoản</Link>
+        <Link href="/accountant/ledger/cost-reconciliation" className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-700">Đối chiếu chi phí</Link>
+        <Link href="/accountant/ledger/history" className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-700">Lịch sử và mở sổ</Link>
+        <Link href="/accountant/ledger/periods" className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-700">Kỳ kế toán</Link>
+        <Link href="/accountant/ledger/reconciliation" className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-700">Đối soát ngân hàng</Link>
         <TabButton active={tab === "budget"} onClick={() => setTabAndReset("budget")}>Ngân sách & tạm ứng</TabButton>
         <button
           type="button"
@@ -263,12 +328,13 @@ export default function AccountantLedgerPage() {
         onFilter={() => setPage(1)}
       />}
 
-      {tab === "wallet" && <>
+      {loadError && <div role="alert" className="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800"><p>{loadError}</p><button onClick={() => setReload(value => value + 1)} className="shrink-0 rounded-lg border border-rose-300 bg-white px-4 py-2 font-semibold">Thử lại</button></div>}
+      {!loadError && tab === "wallet" && <>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard label="Giao dịch trong kết quả" value={String(total)} note="Mỗi dòng là một giao dịch; các ví liên quan nằm trong chi tiết." tone="blue" />
-          <MetricCard label="Số dư quỹ công ty hiện tại" value={formatCurrency(walletSummary?.currentBalance ?? 0)} note="Ảnh chụp số dư hiện tại, không bị giới hạn theo khoảng ngày." tone="slate" />
-          <MetricCard label="Tiền vào quỹ công ty" value={formatCurrency(walletSummary?.totalInflow ?? 0)} note="Theo bộ lọc đang chọn; chỉ tính biến động của quỹ công ty." tone="green" />
-          <MetricCard label="Tiền ra quỹ công ty" value={formatCurrency(walletSummary?.totalOutflow ?? 0)} note="Theo bộ lọc đang chọn; chỉ tính biến động của quỹ công ty." tone="rose" />
+          <MetricCard label="Số dư quỹ công ty hiện tại" value={walletSummary ? formatCurrency(walletSummary.currentBalance) : "?"} note="Ảnh chụp số dư hiện tại, không bị giới hạn theo khoảng ngày." tone="slate" />
+          <MetricCard label="Tiền vào quỹ công ty" value={walletSummary ? formatCurrency(walletSummary.totalInflow) : "?"} note="Theo bộ lọc đang chọn; chỉ tính biến động của quỹ công ty." tone="green" />
+          <MetricCard label="Tiền ra quỹ công ty" value={walletSummary ? formatCurrency(walletSummary.totalOutflow) : "?"} note="Theo bộ lọc đang chọn; chỉ tính biến động của quỹ công ty." tone="rose" />
         </div>
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <SectionHeading title="Giao dịch ví" subtitle="Một giao dịch chỉ xuất hiện một lần. Chọn dòng để xem số dư trước và sau ở từng ví." />
@@ -284,7 +350,7 @@ export default function AccountantLedgerPage() {
                     <td className="px-5 py-4"><span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${typeColor(row.type)}`}>{transactionLabels[row.type] ?? row.type}</span><p className="mt-1 text-[11px] text-slate-400">{row.referenceType ? `${referenceLabels[row.referenceType] ?? row.referenceType} · #${row.referenceId ?? "—"}` : "Không có tham chiếu"}</p></td>
                     <td className="px-5 py-4"><div className="flex flex-wrap gap-1.5">{row.walletMovements.map((movement) => <span key={movement.id} className="rounded-lg bg-slate-100 px-2 py-1 text-[11px] text-slate-600">{walletOwnerLabel(movement.walletOwnerType, movement.walletOwnerId)}</span>)}</div></td>
                     <td className="px-5 py-4 text-right text-sm font-bold text-slate-900">{formatCurrency(row.amount)}</td>
-                    <td className="px-5 py-4"><StatusPill text={statusLabel(row.status)} /></td>
+                    <td className="px-5 py-4"><StatusBadge variant={row.status === "SUCCESS" ? "emerald" : row.status === "PENDING" ? "amber" : row.status === "FAILED" ? "rose" : "slate"} label={statusLabel(row.status)} /></td>
                     <td className="px-5 py-4 whitespace-nowrap text-xs text-slate-600">{formatDateTime(row.timestamp)}</td>
                   </tr>
                 ))}
@@ -295,10 +361,10 @@ export default function AccountantLedgerPage() {
         </section>
       </>}
 
-      {tab === "journal" && <>
+      {!loadError && tab === "journal" && <>
         <div className="grid gap-3 sm:grid-cols-3">
           <MetricCard label="Bút toán trong kết quả" value={String(total)} note="Mỗi bút toán gắn với một sự kiện nghiệp vụ cụ thể." tone="blue" />
-          <MetricCard label="Tổng phát sinh bên tăng" value={formatCurrency(totalDebit)} note="Cộng các dòng bút toán ở trang hiện tại." tone="green" />
+          <MetricCard label="Giá trị bút toán ở trang này" value={formatCurrency(totalDebit)} note="Cộng các dòng bút toán ở trang hiện tại." tone="green" />
           <MetricCard label="Bút toán cân bằng" value={`${balancedCount} / ${journalRows.length}`} note="So sánh hai phía của từng bút toán đang hiển thị." tone="slate" />
         </div>
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -323,7 +389,7 @@ export default function AccountantLedgerPage() {
         </section>
       </>}
 
-      {tab === "advances" && <section className="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm">
+      {!loadError && tab === "advances" && <section className="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm">
         <SectionHeading title="Tạm ứng còn phải quyết toán theo nhân viên" subtitle="Mỗi dòng là một nhân viên. Mở rộng để xem từng khoản tạm ứng, chứng từ đã xác nhận, tiền hoàn thật và phần bù trừ lương." badge={`${advanceRows.length} nhân viên`} amber />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[740px] text-left">
@@ -348,7 +414,7 @@ export default function AccountantLedgerPage() {
         {!loading && advanceRows.length > 0 && <div className="border-t border-amber-100 bg-amber-50/50 px-5 py-3 text-sm text-slate-600">Tổng nhân viên còn tạm ứng: <strong className="text-amber-800">{formatCurrency(totalOutstanding)}</strong></div>}
       </section>}
 
-      {tab === "budget" && <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {!loadError && tab === "budget" && <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <SectionHeading title="Theo dõi ngân sách theo dự án" subtitle="Xem riêng chi phí đã xác nhận, tiền đang khóa cho yêu cầu và tạm ứng còn mở; các khoản này không cộng chồng lên nhau." badge={`${budgetRows.length} dự án`} />
         <div className="border-b border-blue-100 bg-blue-50/60 px-5 py-3 text-xs leading-5 text-blue-900">Chi phí đã xác nhận lấy từ số liệu ngân sách hiện có. Tạm ứng đang mở là số còn phải quyết toán. Tiền đang khóa chỉ gồm phần giữ cho yêu cầu đã được duyệt hoặc đã xác nhận chứng từ.</div>
         {loading ? <div className="px-5 py-12 text-center text-sm text-slate-500">Đang tải ngân sách…</div> : budgetRows.length === 0 ? <div className="px-5 py-12 text-center text-sm text-slate-500">Chưa có dữ liệu ngân sách dự án.</div> : <div className="divide-y divide-slate-100">{budgetRows.map((project) => {
@@ -426,10 +492,6 @@ function BudgetMetric({ label, value, tone }: { label: string; value: number; to
 
 function SectionHeading({ title, subtitle, badge, amber = false }: { title: string; subtitle: string; badge?: string; amber?: boolean }) {
   return <div className={`flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4 ${amber ? "border-amber-100 bg-amber-50/50" : "border-slate-100"}`}><div><h2 className="text-base font-bold text-slate-900">{title}</h2><p className="mt-1 text-xs text-slate-500">{subtitle}</p></div>{badge && <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${amber ? "border-amber-200 bg-white text-amber-800" : "border-blue-100 bg-blue-50 text-blue-700"}`}>{badge}</span>}</div>;
-}
-
-function StatusPill({ text }: { text: string }) {
-  return <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">{text}</span>;
 }
 
 function BalanceBadge({ balanced }: { balanced: boolean }) {

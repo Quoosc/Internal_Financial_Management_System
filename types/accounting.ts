@@ -15,6 +15,7 @@ export enum PayrollStatus {
 
 /** khớp với accounting.entity.PayslipStatus */
 export enum PayslipStatus {
+  REVERSED = "REVERSED",
   DRAFT = "DRAFT",
   PAID = "PAID",
 }
@@ -107,6 +108,7 @@ export interface PayrollDetailResponse {
   startDate: string;
   endDate: string;
   status: PayrollStatus;
+  nettingApplied: boolean;
   employeeCount: number;
   totalNetPayroll: number;
   entries: PayrollEntry[];
@@ -207,6 +209,12 @@ export interface UpdatePayslipEntryBody {
  * Balance tracking bởi Wallet(COMPANY_FUND) — entity này chỉ là metadata.
  */
 export interface CompanyFundResponse {
+  bankComparisonStatus: "VERIFIED_SCOPE" | "MISSING_EVIDENCE";
+  bankScopeConfirmed: boolean;
+  corporateBalanceAtStatement: number | null;
+  pendingCorporateAmount: number | null;
+  statementAsOf: string | null;
+  statementEvidenceRef: string | null;
   id: number;
   bankName: string;
   bankAccount: string;
@@ -215,7 +223,7 @@ export interface CompanyFundResponse {
   /** Last known external bank balance entered by Accountant */
   externalBankBalance: number;
   /** currentWalletBalance − externalBankBalance (expected = 0) */
-  bankDiscrepancy: number;
+  bankDiscrepancy: number | null;
   lastStatementDate: string | null;    // "YYYY-MM-DD"
   lastStatementUpdatedBy: string | null;
 }
@@ -229,6 +237,11 @@ export interface CompanyFundResponse {
  *   2. Bank statement match (external reconciliation)
  */
 export interface ReconciliationReportResponse {
+  bankComparisonStatus: "VERIFIED_SCOPE" | "MISSING_EVIDENCE";
+  corporateBalanceAtStatement: number | null;
+  pendingCorporateAmount: number | null;
+  statementAsOf: string | null;
+  statementEvidenceRef: string | null;
   generatedAt: string;
 
   // System Integrity Check (FLOAT_MAIN invariant)
@@ -246,7 +259,7 @@ export interface ReconciliationReportResponse {
   // Bank Statement Check (external reconciliation)
   externalBankBalance: number;
   lastStatementDate: string | null;
-  bankDiscrepancy: number;           // Expected = 0
+  bankDiscrepancy: number | null;           // Expected = 0
 }
 
 /**
@@ -264,6 +277,8 @@ export interface SystemTopupRequest {
  * khớp với accounting.dto.request.UpdateBankStatementRequest
  */
 export interface UpdateBankStatementRequest {
+  evidenceRef: string;
+  asOf: string;
   externalBankBalance: number;
   lastStatementDate: string;     // "YYYY-MM-DD"
 }
@@ -287,7 +302,9 @@ export type AccountingJournalEvent =
   | "PAYROLL_SETTLEMENT"
   | "SYSTEM_TOPUP"
   | "DEPARTMENT_ALLOCATION"
-  | "PROJECT_ALLOCATION";
+  | "PROJECT_ALLOCATION"
+  | "REVERSAL"
+  | "OPENING_BALANCE";
 
 export interface AccountingJournalItem {
   id: number;
@@ -326,6 +343,8 @@ export interface AccountingJournalLine {
 }
 
 export interface AccountingJournalDetail extends AccountingJournalItem {
+  businessDate: string | null; departmentName: string | null; phaseName: string | null; categoryName: string | null;
+  sourceSnapshot: string | null; originalJournalId: number | null; reversalJournalId?: number | null;
   totalDebit: number;
   totalCredit: number;
   lines: AccountingJournalLine[];

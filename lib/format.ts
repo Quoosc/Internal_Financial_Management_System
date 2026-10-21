@@ -4,6 +4,7 @@
  */
 
 export function formatCurrency(amount: number): string {
+  if (!Number.isFinite(amount)) return "—";
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
@@ -38,22 +39,26 @@ export function parseApiDate(value: string | null | undefined): Date | null {
 
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
+  const parsed = parseApiDate(iso);
+  if (!parsed) return "—";
   return new Intl.DateTimeFormat("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(parseApiDate(iso) ?? new Date(iso));
+  }).format(parsed);
 }
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
+  const parsed = parseApiDate(iso);
+  if (!parsed) return "—";
   return new Intl.DateTimeFormat("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  }).format(parseApiDate(iso) ?? new Date(iso));
+  }).format(parsed);
 }
 
 export function formatRelativeTime(iso: string): string {

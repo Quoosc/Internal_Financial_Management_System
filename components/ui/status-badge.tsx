@@ -126,6 +126,7 @@ const REQUEST_STATUS_VARIANT: Record<string, BadgeVariant> = {
   [RequestStatus.PAID]: "emerald",
   [RequestStatus.REJECTED]: "rose",
   [RequestStatus.CANCELLED]: "slate",
+  [RequestStatus.REVERSED]: "rose",
   PENDING_ACCOUNTANT_EXECUTION: "indigo",
 };
 
@@ -138,6 +139,7 @@ const REQUEST_STATUS_LABEL: Partial<Record<RequestStatus, string>> = {
   [RequestStatus.PAID]: "Đã xử lý",
   [RequestStatus.REJECTED]: "Từ chối",
   [RequestStatus.CANCELLED]: "Đã hủy",
+  [RequestStatus.REVERSED]: "Đã đảo nghiệp vụ",
 };
 
 export function RequestStatusBadge({
