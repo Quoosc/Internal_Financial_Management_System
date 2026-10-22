@@ -841,7 +841,7 @@ export default function TLProjectDetailPage({ params }: PageProps) {
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label={<MetricLabel label="Hạn mức dự án" description="Mức ngân sách kế hoạch tối đa của dự án, không phải số tiền đã được cấp." />} value={formatCurrency(project.totalBudget)} helper="Ngân sách kế hoạch" tone="blue" />
         <MetricCard label={<MetricLabel label="Đã chi" description="Tổng giá trị các giao dịch đã hoàn tất và được ghi nhận cho dự án." />} value={formatCurrency(budgetSummary.totalSpent)} helper={`${overallBurn}% ngân sách đã sử dụng`} tone={overallBurn >= 85 ? "rose" : "indigo"} />
-        <MetricCard label={<MetricLabel label="Quỹ khả dụng" description="Số tiền thực tế dự án đang có thể sử dụng cho các yêu cầu mới." />} value={formatCurrency(budgetSummary.availableBudget)} helper={`${budgetSummary.remainingPercent}% khả dụng`} tone="emerald" />
+        <MetricCard label={<MetricLabel label="Ngân sách còn theo chi phí" description="Ngân sách đã cấp trừ chi phí đã xác nhận; số dư ví và tiền đang giữ được theo dõi riêng." />} value={formatCurrency(budgetSummary.availableBudget)} helper={`${budgetSummary.remainingPercent}% ngân sách còn lại`} tone="emerald" />
         <MetricCard label="Thành viên" value={String(project.members.length)} helper={`${project.phases.length} giai đoạn`} tone="cyan" />
       </section>
 
@@ -859,7 +859,7 @@ export default function TLProjectDetailPage({ params }: PageProps) {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <InfoCard label="Hạn mức kế hoạch" value={formatCurrency(project.totalBudget)} />
           <InfoCard label="Đã chi" value={formatCurrency(budgetSummary.totalSpent)} tone="text-rose-700" />
-          <InfoCard label="Quỹ khả dụng" value={formatCurrency(budgetSummary.availableBudget)} tone="text-emerald-700" />
+          <InfoCard label="Ngân sách còn theo chi phí" value={formatCurrency(budgetSummary.availableBudget)} tone="text-emerald-700" />
         </div>
 
         <div className="mt-5 space-y-2">
