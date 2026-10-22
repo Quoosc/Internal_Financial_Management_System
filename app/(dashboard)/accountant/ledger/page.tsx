@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
+import { ReferencePicker } from "@/components/accounting/reference-picker";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useRouter } from "next/navigation";
 import { ApiError, api } from "@/lib/api-client";
@@ -112,6 +113,7 @@ function typeColor(type: string) {
 export default function AccountantLedgerPage() {
   const router = useRouter();
   const toast = useToast();
+  const [search,setSearch] = useState("");
   const [tab, setTab] = useState<LedgerTab>("wallet");
   const [type, setType] = useState("");
   const [status, setStatus] = useState("");
@@ -134,6 +136,7 @@ export default function AccountantLedgerPage() {
       const params = new URLSearchParams(window.location.search);
       const requested = params.get("tab");
       setTab(requested && ["wallet", "journal", "advances", "budget"].includes(requested) ? requested as LedgerTab : "wallet");
+      setSearch(params.get("search") || "");
       setType(params.get("type") || ""); setStatus(params.get("status") || "");
       setReferenceType(params.get("referenceType") || ""); setEvent(params.get("event") || "");
       setFrom(params.get("from") || ""); setTo(params.get("to") || "");
@@ -150,10 +153,10 @@ export default function AccountantLedgerPage() {
   useEffect(() => {
     if (!ready) return;
     const params = new URLSearchParams({ tab, page: String(page) });
-    Object.entries({ type, status, referenceType, event, from, to, employeeId: journalEmployeeId,
+    Object.entries({ search, type, status, referenceType, event, from, to, employeeId: journalEmployeeId,
       projectId: journalProjectId, requestId: journalRequestId }).forEach(([key, value]) => { if (value) params.set(key, value); });
     window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params}`);
-  }, [ready, tab, page, type, status, referenceType, event, from, to, journalEmployeeId, journalProjectId, journalRequestId]);
+  }, [ready, tab, page, search, type, status, referenceType, event, from, to, journalEmployeeId, journalProjectId, journalRequestId]);
   const [walletSummary, setWalletSummary] = useState<LedgerSummaryResponse | null>(null);
   const [walletRows, setWalletRows] = useState<AccountantWalletTransactionResponse[]>([]);
   const [journalRows, setJournalRows] = useState<AccountingJournalItem[]>([]);
@@ -229,9 +232,9 @@ export default function AccountantLedgerPage() {
     setLoading(true); setLoadError(null); setTotal(0); setTotalPages(1);
     setWalletSummary(null); setWalletRows([]); setJournalRows([]); setAdvanceRows([]); setBudgetRows([]);
     try {
-      const response = await api.get<AdvanceEmployeeSummary[]>("/api/v1/accountant/ledger/advances/outstanding");
+      const response = await api.get<PaginatedResponse<AdvanceEmployeeSummary>>(`/api/v1/accountant/ledger/advances/outstanding?page=${page}&limit=${PAGE_SIZE}&search=${encodeURIComponent(search)}`);
       if (epoch !== requestEpoch.current) return;
-      setAdvanceRows(response.data ?? []);
+      const result=getPage(response.data); setAdvanceRows(result.items); setTotal(result.total); setTotalPages(result.totalPages);
     } catch (error) {
       if (epoch !== requestEpoch.current) return;
       setLoadError(error instanceof ApiError ? error.apiMessage : "Không tải được dữ liệu. Vui lòng thử lại.");
@@ -241,16 +244,16 @@ export default function AccountantLedgerPage() {
     } finally {
       if (epoch === requestEpoch.current) setLoading(false);
     }
-  }, [toast]);
+  }, [toast,page,search]);
 
   const loadBudgetExposure = useCallback(async () => {
     const epoch = ++requestEpoch.current;
     setLoading(true); setLoadError(null); setTotal(0); setTotalPages(1);
     setWalletSummary(null); setWalletRows([]); setJournalRows([]); setAdvanceRows([]); setBudgetRows([]);
     try {
-      const response = await api.get<LedgerProjectBudget[]>("/api/v1/accountant/ledger/budget-exposure");
+      const response = await api.get<PaginatedResponse<LedgerProjectBudget>>(`/api/v1/accountant/ledger/budget-exposure?page=${page}&limit=${PAGE_SIZE}&search=${encodeURIComponent(search)}`);
       if (epoch !== requestEpoch.current) return;
-      setBudgetRows(response.data ?? []);
+      const result=getPage(response.data); setBudgetRows(result.items); setTotal(result.total); setTotalPages(result.totalPages);
     } catch (error) {
       if (epoch !== requestEpoch.current) return;
       setLoadError(error instanceof ApiError ? error.apiMessage : "Không tải được dữ liệu. Vui lòng thử lại.");
@@ -260,7 +263,7 @@ export default function AccountantLedgerPage() {
     } finally {
       if (epoch === requestEpoch.current) setLoading(false);
     }
-  }, [toast]);
+  }, [toast,page,search]);
 
   useEffect(() => {
     if (!ready) return;
@@ -291,7 +294,7 @@ export default function AccountantLedgerPage() {
           </div>
           <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 sm:min-w-44">
             <p className="text-[11px] font-bold uppercase tracking-widest text-blue-100">{tab === "wallet" ? "Giao dịch tìm thấy" : tab === "journal" ? "Bút toán tìm thấy" : tab === "advances" ? "Nhân viên còn tạm ứng" : "Dự án theo dõi"}</p>
-            <p className="mt-1 text-3xl font-bold">{tab === "advances" ? advanceRows.length : tab === "budget" ? budgetRows.length : total}</p>
+            <p className="mt-1 text-3xl font-bold">{total}</p>
           </div>
         </div>
       </section>
@@ -318,6 +321,7 @@ export default function AccountantLedgerPage() {
         </button>
       </div>
 
+      {(tab === "advances" || tab === "budget") && <label className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-5 text-xs text-slate-500">{tab === "advances" ? "Tìm tên nhân viên" : "Tìm tên hoặc mã dự án"}<input value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} className="h-11 rounded-xl border border-slate-200 px-3 text-sm"/></label>}
       {(tab === "wallet" || tab === "journal") && <FilterPanel
         tab={tab} type={type} setType={setType} status={status} setStatus={setStatus}
         referenceType={referenceType} setReferenceType={setReferenceType} event={event} setEvent={setEvent}
@@ -390,7 +394,7 @@ export default function AccountantLedgerPage() {
       </>}
 
       {!loadError && tab === "advances" && <section className="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm">
-        <SectionHeading title="Tạm ứng còn phải quyết toán theo nhân viên" subtitle="Mỗi dòng là một nhân viên. Mở rộng để xem từng khoản tạm ứng, chứng từ đã xác nhận, tiền hoàn thật và phần bù trừ lương." badge={`${advanceRows.length} nhân viên`} amber />
+        <SectionHeading title="Tạm ứng còn phải quyết toán theo nhân viên" subtitle="Mỗi dòng là một nhân viên. Mở rộng để xem từng khoản tạm ứng, chứng từ đã xác nhận, tiền hoàn thật và phần bù trừ lương." badge={`${total} nhân viên`} amber />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[740px] text-left">
             <thead className="bg-amber-50/60 text-[10px] font-bold uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Nhân viên</th><th className="px-5 py-3">Khoản đang mở</th><th className="px-5 py-3 text-right">Đã giải ngân</th><th className="px-5 py-3 text-right">Còn phải quyết toán</th><th className="px-5 py-3 text-right">Chi tiết</th></tr></thead>
@@ -411,11 +415,11 @@ export default function AccountantLedgerPage() {
             </tbody>
           </table>
         </div>
-        {!loading && advanceRows.length > 0 && <div className="border-t border-amber-100 bg-amber-50/50 px-5 py-3 text-sm text-slate-600">Tổng nhân viên còn tạm ứng: <strong className="text-amber-800">{formatCurrency(totalOutstanding)}</strong></div>}
+        {!loading && advanceRows.length > 0 && <div className="border-t border-amber-100 bg-amber-50/50 px-5 py-3 text-sm text-slate-600">Tổng dư tạm ứng trên trang này: <strong className="text-amber-800">{formatCurrency(totalOutstanding)}</strong></div>}
       </section>}
 
       {!loadError && tab === "budget" && <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <SectionHeading title="Theo dõi ngân sách theo dự án" subtitle="Xem riêng chi phí đã xác nhận, tiền đang khóa cho yêu cầu và tạm ứng còn mở; các khoản này không cộng chồng lên nhau." badge={`${budgetRows.length} dự án`} />
+        <SectionHeading title="Theo dõi ngân sách theo dự án" subtitle="Xem riêng chi phí đã xác nhận, tiền đang khóa cho yêu cầu và tạm ứng còn mở; các khoản này không cộng chồng lên nhau." badge={`${total} dự án`} />
         <div className="border-b border-blue-100 bg-blue-50/60 px-5 py-3 text-xs leading-5 text-blue-900">Chi phí đã xác nhận lấy từ số liệu ngân sách hiện có. Tạm ứng đang mở là số còn phải quyết toán. Tiền đang khóa chỉ gồm phần giữ cho yêu cầu đã được duyệt hoặc đã xác nhận chứng từ.</div>
         {loading ? <div className="px-5 py-12 text-center text-sm text-slate-500">Đang tải ngân sách…</div> : budgetRows.length === 0 ? <div className="px-5 py-12 text-center text-sm text-slate-500">Chưa có dữ liệu ngân sách dự án.</div> : <div className="divide-y divide-slate-100">{budgetRows.map((project) => {
           const expanded = expandedBudgetProject === project.projectId;
@@ -437,6 +441,7 @@ export default function AccountantLedgerPage() {
         })}</div>}
       </section>}
 
+      {(tab === "advances" || tab === "budget") && !loadError && <Pagination page={page} totalPages={totalPages} total={total} onPage={setPage}/>}
       <span className="sr-only">{currentRows.length} dòng đang hiển thị</span>
     </div>
   );
@@ -466,9 +471,9 @@ function FilterPanel(props: {
         <Select value={props.referenceType} onChange={(e) => { props.setReferenceType(e.target.value); props.onFilter(); }}><option value="">Tất cả nguồn</option>{referenceTypes.map((value) => <option key={value} value={value}>{referenceLabels[value] ?? value}</option>)}</Select>
       </> : <>
         <Select value={props.event} onChange={(e) => { props.setEvent(e.target.value); props.onFilter(); }}><option value="">Tất cả bút toán</option>{journalEvents.map((value) => <option key={value} value={value}>{eventLabels[value]}</option>)}</Select>
-        <input inputMode="numeric" value={props.employeeId} onChange={(e) => { props.setEmployeeId(e.target.value.replace(/\D/g, "")); props.onFilter(); }} className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="ID nhân viên" aria-label="Lọc theo ID nhân viên" />
-        <input inputMode="numeric" value={props.projectId} onChange={(e) => { props.setProjectId(e.target.value.replace(/\D/g, "")); props.onFilter(); }} className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="ID dự án" aria-label="Lọc theo ID dự án" />
-        <input inputMode="numeric" value={props.requestId} onChange={(e) => { props.setRequestId(e.target.value.replace(/\D/g, "")); props.onFilter(); }} className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="ID yêu cầu" aria-label="Lọc theo ID yêu cầu" />
+        <ReferencePicker kind="employee" label="Nhân viên" value={props.employeeId} onChange={v=>{props.setEmployeeId(v);props.onFilter();}}/>
+        <ReferencePicker kind="project" label="Dự án" value={props.projectId} onChange={v=>{props.setProjectId(v);props.onFilter();}}/>
+        <ReferencePicker kind="request" label="Yêu cầu" value={props.requestId} onChange={v=>{props.setRequestId(v);props.onFilter();}}/>
       </>}
       <input type="date" value={props.from} onChange={(e) => { props.setFrom(e.target.value); props.onFilter(); }} className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" aria-label="Từ ngày" />
       <input type="date" value={props.to} onChange={(e) => { props.setTo(e.target.value); props.onFilter(); }} className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" aria-label="Đến ngày" />

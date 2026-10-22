@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ApiError, api } from "@/lib/api-client";
+import { ApiError, api, downloadFile } from "@/lib/api-client";
 import { useToast } from "@/contexts/toast-context";
 import {
   AuditAction,
@@ -292,10 +292,6 @@ function summarizeChange(log: AuditLogResponse): string {
   return `Thay đổi: ${readable}${suffix}`;
 }
 
-function normalizeCsvValue(value: string): string {
-  const safe = /^[=+\-@\t\r]/.test(value) ? "'" + value : value;
-  return `"${safe.replace(/"/g, '""')}"`;
-}
 
 export default function AuditLogsPage() {
   const toast = useToast();
@@ -315,6 +311,8 @@ export default function AuditLogsPage() {
   const [totalPages, setTotalPages] = useState(1);
 
   const [loading, setLoading] = useState(true);
+  const [loadError,setLoadError]=useState("");
+  const [reload,setReload]=useState(0);
   const [actorInput, setActorInput] = useState(actorFilter);
   const [selectedLog, setSelectedLog] = useState<AuditLogResponse | null>(null);
 
@@ -377,7 +375,7 @@ export default function AuditLogsPage() {
     let cancelled = false;
 
     const loadAudits = async () => {
-      setLoading(true);
+      setLoading(true); setLoadError("");
 
       try {
         const filters: AuditLogFilterParams = {
@@ -392,8 +390,8 @@ export default function AuditLogsPage() {
         const query = new URLSearchParams();
         if (filters.actor) query.set("actor", filters.actor);
         if (filters.action) query.set("action", filters.action);
-        if (filters.startDate) query.set("startDate", filters.startDate);
-        if (filters.endDate) query.set("endDate", filters.endDate);
+        if (filters.startDate) query.set("from", filters.startDate);
+        if (filters.endDate) query.set("to", filters.endDate);
         query.set("page", String(filters.page ?? 1));
         query.set("limit", String(filters.limit ?? PAGE_LIMIT));
 
@@ -415,6 +413,7 @@ export default function AuditLogsPage() {
       } catch (err) {
         if (cancelled) return;
 
+        setLoadError(err instanceof ApiError?err.apiMessage:"Không tải được nhật ký kiểm toán.");
         setItems([]);
         setTotal(0);
         setTotalPages(1);
@@ -434,41 +433,26 @@ export default function AuditLogsPage() {
     return () => {
       cancelled = true;
     };
-  }, [actionFilter, actorFilter, endDate, page, startDate, toast]);
+  }, [actionFilter, actorFilter, endDate, page, startDate, toast, reload]);
 
   const filtered = Boolean(actorFilter || actionFilter || startDate || endDate);
 
-  const handleExport = () => {
-    if (items.length === 0) {
-      toast.info("Không có bản ghi nào để xuất trong trang hiện tại.");
-      return;
-    }
-
-    const rows = [
-      ["Thời gian", "Người thực hiện", "Hành động", "Đối tượng", "Mã đối tượng", "Tóm tắt"],
-      ...items.map((item) => [
-        formatDateTime(item.createdAt),
-        item.actorName ?? "Hệ thống",
-        actionMeta(item.action).label,
-        entityLabel(item.entityName),
-        item.entityId,
-        summarizeChange(item),
-      ]),
-    ];
-
-    const csv = rows.map((row) => row.map(normalizeCsvValue).join(",")).join("\n");
-    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `ifms-audit-logs-page-${page}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    toast.success("Đã xuất CSV cho các bản ghi đang hiển thị.");
+  const [exporting,setExporting] = useState(false);
+  const handleExport = async () => {
+    const query=new URLSearchParams();
+    if(actorFilter.trim())query.set("actor",actorFilter.trim());
+    if(actionFilter)query.set("action",actionFilter);
+    if(startDate)query.set("from",startDate);
+    if(endDate)query.set("to",endDate);
+    setExporting(true);
+    try { await downloadFile(`/api/v1/spreadsheets/audit-history/export?${query}`,"ifms-audit-history.xlsx"); toast.success("Đã xuất toàn bộ nhật ký theo bộ lọc."); }
+    catch(err) { toast.error(err instanceof ApiError ? err.apiMessage : "Không xuất được nhật ký."); }
+    finally { setExporting(false); }
   };
 
   return (
     <div className="space-y-6">
+      {loadError&&<div role="alert" className="rounded-xl bg-rose-50 p-5 text-sm text-rose-800">{loadError}<button className="ml-3 underline" onClick={()=>setReload(n=>n+1)}>Thử lại</button></div>}
       <section className="overflow-hidden rounded-3xl border border-blue-200 bg-linear-to-br from-blue-700 via-blue-600 to-indigo-700 p-6 text-white shadow-xl shadow-blue-900/10">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
         <div className="space-y-2">
@@ -511,10 +495,11 @@ export default function AuditLogsPage() {
             )}
             <button
               type="button"
-              onClick={handleExport}
+              onClick={() => void handleExport()}
+              disabled={exporting || loading || !!loadError}
               className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
             >
-              Xuất CSV
+              Xuất Excel theo bộ lọc
             </button>
           </div>
         </div>
@@ -580,7 +565,7 @@ export default function AuditLogsPage() {
             <tbody>
               {loading ? (
                 <TableRowSkeleton colSpan={6} rows={8} />
-              ) : items.length === 0 ? (
+              ) : loadError ? (<tr><td colSpan={6} className="p-6 text-center text-rose-700">Không thể hiển thị dữ liệu; hãy thử tải lại.</td></tr>) : items.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8">
                     <EmptyState message="Không tìm thấy bản ghi kiểm toán phù hợp." />

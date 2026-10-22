@@ -25,7 +25,9 @@ export default function AdminSystemFundPage() {
   const [companyFund, setCompanyFund] = useState<CompanyFundResponse | null>(null);
   const [reconciliation, setReconciliation] = useState<ReconciliationReportResponse | null>(null);
 
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [loadError,setLoadError]=useState("");
+  const [candidateError,setCandidateError]=useState("");
 
   const [showTopupModal, setShowTopupModal] = useState(false);
   const [showStatementModal, setShowStatementModal] = useState(false);
@@ -44,7 +46,7 @@ export default function AdminSystemFundPage() {
   const loadData = useCallback(async () => {
     if (!canManageFund) return;
 
-    setLoading(true);
+    setLoading(true); setLoadError(""); setCandidateError(""); setCompanyFund(null); setReconciliation(null);
 
     try {
       const [fundRes, reconRes] = await Promise.all([
@@ -59,18 +61,14 @@ export default function AdminSystemFundPage() {
         try {
           const candidates = await getTopupCandidates();
           setTopupCandidates(candidates.data);
-        } catch {
-          setTopupCandidates([]);
+        } catch (err) {
+          setTopupCandidates([]);setCandidateError(err instanceof ApiError?err.apiMessage:"Không tải được danh sách chứng từ nạp quỹ.");
         }
       } else {
         setTopupCandidates([]);
       }
     } catch (err) {
-      if (err instanceof ApiError) {
-        toast.error(err.apiMessage);
-      } else {
-        toast.error("Không thể tải dữ liệu quỹ hệ thống.");
-      }
+      setLoadError(err instanceof ApiError?err.apiMessage:"Không thể tải dữ liệu quỹ hệ thống.");
     } finally {
       setLoading(false);
     }
@@ -167,8 +165,11 @@ export default function AdminSystemFundPage() {
     );
   }
 
+  if(loading)return <p role="status" className="rounded-2xl bg-white p-10 text-center text-slate-500">Đang tải quỹ hệ thống…</p>;
+  if(loadError||!companyFund||!reconciliation)return <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-800">{loadError||"Dữ liệu quỹ chưa được trả về đầy đủ."}<button className="ml-3 underline" onClick={()=>void loadData()}>Thử lại</button></div>;
   return (
     <div className="space-y-6">
+      {candidateError&&<div role="alert" className="rounded-xl bg-rose-50 p-4 text-sm text-rose-800">{candidateError}<button className="ml-3 underline" onClick={()=>void loadData()}>Tải lại chứng từ</button></div>}
       <section className="overflow-hidden rounded-3xl border border-blue-200 bg-linear-to-br from-blue-700 via-blue-600 to-indigo-700 p-6 text-white shadow-xl shadow-blue-900/10">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
@@ -337,7 +338,7 @@ export default function AdminSystemFundPage() {
                 {candidate.bankReference} · {formatCurrency(candidate.amount)} · {candidate.bookingDate}
               </option>)}
             </select>
-            {topupCandidates.length === 0 && <p className="mt-2 text-xs text-amber-700">Chưa có sao kê IN/BOOKED chưa sử dụng. Hãy nhập sao kê và xác nhận đã ghi nhận trước khi nạp quỹ.</p>}
+            {!candidateError && topupCandidates.length === 0 && <p className="mt-2 text-xs text-amber-700">Chưa có sao kê IN/BOOKED chưa sử dụng. Hãy nhập sao kê và xác nhận đã ghi nhận trước khi nạp quỹ.</p>}
           </div>
         </div>
       </SideDrawer>
