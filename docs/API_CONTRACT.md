@@ -12,6 +12,8 @@ gồm `items`, `total`, `page`, `size`, `totalPages` và nhóm API dưới đây
 
 | API | Tham số chính | Kết quả / lưu ý |
 |---|---|---|
+| `GET /accountant/ledger/bank-evidence/topup-candidates` | `search` theo mã sao kê, `from`, `to`, `amount` đúng số tiền, `page=1`, `limit=20` (tối đa 100) | `PageResponse<BankCandidateResponse>`; chỉ tài khoản đang đối soát, IN/BOOKED chưa dùng, gồm xác nhận BOOKED cho dòng PENDING. |
+| `GET /accountant/ledger/bank-evidence/{id}/candidates` | `search` theo mã giao dịch IFMS, `from`, `to`, `page=1`, `limit=20` (tối đa 100) | `PageResponse<BankCandidateResponse>`; số tiền/chiều tự lấy từ sao kê id; lọc biến động công ty ròng trước phân trang, loại giao dịch đã khớp và phân bổ nội bộ. |
 | `GET /accountant/ledger/advances/outstanding` | `search`, `page=1`, `limit=20` | `PageResponse<AdvanceEmployeeSummaryResponse>`; nhóm theo nhân viên, mỗi nhân viên có từng khoản còn mở. |
 | `GET /accountant/ledger/budget-exposure` | `search`, `page=1`, `limit=20` | `PageResponse<LedgerProjectBudgetResponse>`; một dự án gồm giai đoạn và danh mục. |
 | `GET /accountant/ledger/journals` | `event`, `from`, `to`, `employeeId`, `projectId`, `requestId`, `page`, `limit` | `PageResponse<AccountingJournalItemResponse>`. |
@@ -20,6 +22,13 @@ gồm `items`, `total`, `page`, `size`, `totalPages` và nhóm API dưới đây
 | `GET /spreadsheets/lookups/{kind}` | `kind` = `employee`, `project`, `department`, `phase`, `category`, `request`; `search`, `id`, `parent`, `page=1`, `limit=20` | `PageResponse<{id,label}>`; quyền và phạm vi được áp dụng tại server, `id` dùng để khôi phục nhãn lựa chọn từ URL, `parent` giới hạn giai đoạn/danh mục/yêu cầu. |
 | `GET /spreadsheets/{dataset}/export` | `scope` và các bộ lọc dataset hỗ trợ | XLSX của toàn bộ kết quả phù hợp trong giới hạn server; vượt giới hạn báo lỗi, không cắt âm thầm. `audit-history` nhận bộ lọc audit, `account-balances` nhận `event`, `journals` nhận `requestId`. |
 | `GET /spreadsheets/exports/history` | — | Lịch sử xuất có kiểm soát quyền. |
+
+`BankCandidateResponse` gồm `id`, `label`, `referenceCode`, `date` (YYYY-MM-DD),
+`amount` (signed ở giao dịch, dương ở chứng từ nạp). Hai endpoint chỉ CFO/ACCOUNTANT;
+ngày đảo chiều, page/limit/số tiền không hợp lệ trả 400. `from`/`to` bao gồm
+hai đầu; không truyền ngày thì tìm toàn lịch sử. Contract này thay mảng cũ,
+cần triển khai frontend và backend cùng phiên bản. Chọn một ứng viên không tự
+chuyển tiền/khớp sao kê; khi xác nhận, server vẫn khóa và kiểm lại chứng cứ.
 
 Bốn dataset báo cáo mới: `department-employees` và `department-budgets`
 (MANAGER/CFO/ACCOUNTANT); `project-cost-details`

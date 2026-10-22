@@ -1,5 +1,69 @@
 # IFMS — review triển khai sổ cái và Excel
 
+## Kết quả sửa F20–F24 — 23/10/2026
+
+**Đã sửa 5/5 phát hiện của lần review gần nhất và kiểm chứng lại.** G4.1 trở
+về D theo tiêu chí triển khai và kiểm chứng đại diện; toàn plan là **19/23 gói
+D, khoảng 83%**. Còn G0.1, G3.1, G4.2, V1; chưa nghiệm thu toàn bộ sáu role.
+
+| Lỗi | Thay đổi đã thực hiện | Kiểm chứng |
+|---|---|---|
+| F20 | Đổi dự án xóa lý do/PIN/xác nhận; bỏ qua phản hồi preview cũ; chặn gửi nếu project trên preview không trùng dự án đang chọn hoặc chưa xác nhận. | Browser chọn dự án 1, điền xác nhận/PIN, chuyển dự án 2: cả ba trường trống và nút cập nhật bị khóa. |
+| F21 | Chi tiết journal và giao dịch ví có loading/error riêng, xóa dữ liệu cũ khi ID đổi; HTTP 500 không hiện thành thiếu dữ liệu; HTTP 404 có thông báo riêng, có thử lại. | Browser kiểm cả hai trang: 500 → thử lại → 404. |
+| F22 | Lỗi tải ngân hàng chặn phần nội dung kết luận/cấu hình/danh sách và có retry. | Browser gây lỗi company-fund: có lỗi, không có yêu cầu cấu hình hay thông báo chưa có sao kê; retry gọi lại API. |
+| F23 | Lọc employee/project/department/phase/category hiển thị tổng trong phạm vi lọc, hướng dẫn mở journal đầy đủ; không kết luận các dòng lọc là journal mất cân bằng. | Browser nhận các dòng lọc không cân bằng và kiểm thông báo theo phạm vi. |
+| F24 | Hai API ứng viên trả PageResponse; truy vấn read model bất biến + Specification lọc trước phân trang, không còn cắt 500/1.000. UI dùng bộ chọn chung có tên/mã, ngày, phân trang; nạp quỹ có thêm lọc đúng số tiền. | PostgreSQL tạo 501 chứng từ: trang 26 còn 1 dòng; lọc tài khoản/ngày/số tiền, loại PENDING và đã khớp, kiểm quyền. Matching phân trang theo biến động tiền ròng đúng chiều, loại phân bổ nội bộ. Browser kiểm page/search/ngày và chứng từ cũ. |
+
+**Kết quả chạy mới:** 15 FinancialWorkflowIntegrationTest + 5
+JournalDatabaseIntegrationTest = **20/20 backend**, **12/12 browser**, production
+build/TypeScript qua; 34 migration qua trên PostgreSQL 16 cô lập. Browser dùng
+fixture mạng để kiểm UI; backend dùng dịch vụ và DB thật trong container tạm.
+Đây chưa phải UAT sáu role nối trực tiếp UI với database triển khai. DB chính
+không bị sửa; server/container kiểm thử đã dừng/dọn.
+
+API ứng viên đổi từ mảng sang `ApiResponse<PageResponse<BankCandidateResponse>>`;
+frontend/backend phải dùng cùng contract. Các entity `@Subselect @Immutable`
+chỉ đọc bảng đã có, không thêm bảng/view hoặc thay schema, không cần migration mới.
+Xem API_CONTRACT.md để biết tham số và giới hạn. Các kết luận 18/23 bên dưới
+là lịch sử trước khi sửa F20–F24.
+
+---
+
+## Kiểm tra lại ngày 23/10/2026 — lịch sử phát hiện trước khi sửa
+
+**Chưa hoàn thành toàn bộ plan.** Nhận định 6/6 nhóm tồn đọng đã hoàn tất ở
+đợt trước chỉ phản ánh phần triển khai và kiểm tra đại diện. Lần kiểm tra lại
+phát hiện nhóm lỗi API vẫn còn sót và kiểm soát xác nhận trên giao diện chưa
+đủ. G4.1 chuyển từ D sang P; theo cùng cách đếm bảo thủ, còn **18/23 gói D
+(khoảng 78%)**, 5 gói P: G0.1, G3.1, G4.1, G4.2, V1. Đây không phải tỷ lệ
+mọi kịch bản đã được nghiệm thu.
+
+| ID | Mức | Phát hiện | Hướng xử lý |
+|---|---|---|---|
+| F20 | P1 | Đổi dự án ở `cost-reconciliation.tsx` chỉ xóa preview; không xóa lý do, PIN và xác nhận chứng từ. Đã tái hiện chọn dự án 1, nhập lý do/PIN và xác nhận, chuyển sang dự án 2: checkbox vẫn được chọn, PIN vẫn 5 ký tự và nút cập nhật bật. Backend kiểm lại số liệu/PIN, nhưng không biết xác nhận đó thuộc dự án cũ. | Xóa thông tin xác nhận khi đổi dự án hoặc tải preview mới; gắn xác nhận với project/preview đang hiển thị và kiểm lại trước gửi. |
+| F21 | P2 | Chi tiết journal bắt lỗi bằng toast rồi `journal == null` hiện “Không tìm thấy bút toán”. Đã tái hiện HTTP 500. Chi tiết transaction cũng có nhánh tương tự theo code. | Tách trạng thái tải/lỗi/404, có thử lại; xóa dữ liệu cũ khi ID đổi. |
+| F22 | P2 | Trang đối soát ngân hàng bắt lỗi nhưng tiếp tục render phần nội dung: khi fund null có thể hiện yêu cầu cấu hình tài khoản; khi lines rỗng hiện chưa có sao kê. API lỗi vẫn có thể bị hiểu là thiếu cấu hình/dữ liệu. | Chặn phần kết luận/cấu hình khi tải lỗi; retry riêng theo phần dữ liệu. |
+| F23 | P2 | Bảng sổ tài khoản hiển thị “Tổng hai phía chưa cân bằng” bất cứ khi nào tổng các dòng đã lọc khác nhau. Filter project/phase/category có thể chỉ giữ dòng bù trừ tạm ứng của payroll, còn dòng chi phí lương thuộc phạm vi chung. Chênh lệch phần lọc không chứng minh journal gốc sai. | Chỉ kết luận cân bằng khi xét toàn bộ hai phía; khi lọc theo chiều thì mô tả tổng trong phạm vi, liên kết kiểm tra journal đầy đủ. |
+| F24 | P2 | `BankEvidenceService.topupCandidates()` cắt 500 chứng từ mới nhất, không có page/search/total. Chứng từ cũ hơn không chọn được qua giao diện khi dữ liệu lớn; danh sách ứng viên matching cũng chưa có phân trang UI đầy đủ. | Bổ sung API phân trang/tìm mã-ngày-số tiền và UI chọn tương ứng; không cắt âm thầm. |
+
+**Căn cứ kiểm tra:** đọc code frontend/backend hiện tại; hai kịch bản F20/F21
+chạy trên production frontend cổng 3100 với phản hồi API kiểm soát, không ghi
+dữ liệu tài chính. Server kiểm tra đã được dừng. F22–F24 là phát hiện từ code,
+chưa phải tái hiện trên database triển khai.
+
+Kết quả 18 integration test và 5 browser test trước đó vẫn hợp lệ cho các
+kịch bản đã kiểm; chưa bao phủ các lỗi trên. Không chạy lại toàn bộ test trong
+lần review này. Database chính chưa thay đổi. Log `ledger-ui-api.err.log` rỗng;
+`ledger-ui-api.out.log` ghi RabbitMQ connection refused ngày 21/10 ở port
+55672, không phải bằng chứng backend mới đang lỗi. Thời điểm kiểm tra không
+có frontend/backend tại 3000/8080 hoặc container Docker chạy.
+
+Thứ tự tiếp theo: F20 → F21/F22 → F23/F24 → bổ sung kiểm chứng các tình huống
+này; sau đó hoàn thiện preview đóng kỳ, URL/deep link và UAT sáu role, migration
+trên bản sao dữ liệu thật. Các ghi chú bên dưới là lịch sử trước lần rà soát này.
+
+---
+
 > **Cập nhật 23/10/2026:** Đã triển khai F16 (khôi phục bộ lọc Excel từ URL),
 > F17 (audit và xuất toàn bộ kết quả lọc), F18 (event sổ tài khoản), bốn báo cáo
 > theo vai trò, bộ chọn tên/mã có phân quyền, phân trang tạm ứng/ngân sách và

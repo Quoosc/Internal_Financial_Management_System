@@ -1,5 +1,10 @@
 # IFMS — rà soát sổ cái và kế hoạch hoàn thiện nghiệp vụ, giao diện, Excel
 
+> **Sau sửa F20–F24 ngày 23/10:** cả năm phát hiện đã sửa và kiểm chứng.
+> G4.1 trở về D; 19/23 gói D (83% theo số gói), còn G0.1/G3.1/G4.2/V1.
+> 20/20 test backend, 12/12 browser và production build qua. Xem
+> [kết quả và giới hạn](ledger-implementation-review.md).
+
 > **Trạng thái 23/10/2026:** Sáu nhóm tồn đọng bổ sung đã triển khai và kiểm
 > chứng đại diện: F16–F18, ma trận báo cáo Manager/CFO/Accountant, bộ chọn
 > tham chiếu/phân trang và lỗi API. Tổng plan: 19/23 gói ở mức triển khai có

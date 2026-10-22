@@ -1,5 +1,11 @@
 # Sổ cái kế toán IFMS — tài liệu frontend
 
+> **Sau sửa 23/10 — F20–F24:** xác nhận/PIN đối chiếu theo dự án được xóa khi
+> đổi phạm vi; chi tiết tách lỗi tải/404; đối soát ngân hàng có retry và chặn
+> kết luận khi API lỗi; nhãn cân bằng theo phạm vi; bộ chọn ngân hàng phân trang,
+> tìm mã/ngày/số tiền. 20 test backend + 12 browser qua, build production qua.
+> Xem [review mới nhất](ledger-implementation-review.md).
+
 > **Trạng thái 23/10/2026:** Màn hình sổ tài khoản nhận lọc nghiệp vụ, nhân viên,
 > dự án, phòng ban, giai đoạn và danh mục; trang Excel khôi phục bộ lọc từ URL.
 > Danh sách tạm ứng và ngân sách dùng phân trang từ server; bộ chọn tham chiếu

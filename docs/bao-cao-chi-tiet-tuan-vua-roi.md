@@ -1,5 +1,11 @@
 # Báo cáo chi tiết công việc tuần vừa qua — Sổ cái IFMS
 
+> **Cập nhật sau sửa 23/10:** F20–F24 đã sửa và kiểm chứng, gồm xác nhận/PIN
+> theo từng dự án, phân biệt lỗi tải/404, retry ngân hàng, nhãn cân bằng theo
+> phạm vi và ứng viên ngân hàng phân trang/tìm kiếm. G4.1 trở về D;
+> 19/23 gói đạt triển khai có kiểm chứng đại diện (83%), còn G0.1/G3.1/G4.2/V1.
+> Chi tiết ở [review cập nhật](ledger-implementation-review.md).
+
 **Kỳ tổng hợp:** 7 ngày gần nhất, 16–22/10/2026.
 
 **Phạm vi:** frontend `financial-wallet-frontend`, backend `IFMS`; plan sổ cái và nhập/xuất Excel.
@@ -11,7 +17,7 @@
 - Sáu nhóm tồn đọng được yêu cầu xử lý trong đợt cuối: **6/6 đã có sửa và kiểm chứng đại diện (100% phạm vi đợt này)**.
 - Tính theo 23 gói của plan: **19/23 gói có phần triển khai hoàn chỉnh và kiểm chứng đại diện, khoảng 83%**; 4 gói còn điều kiện chưa hoàn tất. Mỗi gói tính một đơn vị, không tính trọng số thời gian. Đây là tỷ lệ gói triển khai, không phải tỷ lệ mọi tình huống nghiệp vụ đã được nghiệm thu.
 - **Chưa gọi toàn bộ plan hoàn thành 100%.** Các gói còn lại là G0.1, G3.1, G4.2 và V1, trình bày ở mục 8.
-- Kiểm chứng mới: **18/18 test backend qua, 5/5 test trình duyệt qua, production build frontend qua**. Flyway chạy đủ **34 migration** trên PostgreSQL thử nghiệm tách biệt.
+- Kiểm chứng mới: **20/20 test backend qua, 12/12 test trình duyệt qua, production build frontend qua**. Flyway chạy đủ **34 migration** trên PostgreSQL thử nghiệm tách biệt.
 - Database triển khai chính chưa được migrate hoặc chuyển đổi trong đợt này.
 
 ## 2. Các thay đổi nền tảng đã triển khai từ plan
@@ -102,11 +108,11 @@ Bốn bộ báo cáo bổ sung:
 
 | Kiểm tra | Kết quả | Phạm vi kết luận |
 |---|---|---|
-| Backend financial workflow | 13 ca qua, 0 lỗi, 0 bỏ qua | Gồm các luồng trước và filter/scope/báo cáo/paging/matching/PIN/kỳ bổ sung. |
+| Backend financial workflow | 15 ca qua, 0 lỗi, 0 bỏ qua | Gồm các luồng trước và filter/scope/báo cáo/paging/matching/PIN/kỳ; thêm 501 chứng từ, tài khoản/ngày/tiền/quyền và ứng viên đã khớp. |
 | Bất biến journal PostgreSQL | 5 ca qua, 0 lỗi, 0 bỏ qua | Các ràng buộc journal, cân bằng, kỳ đóng. |
 | Flyway trên DB cô lập | 34 migration qua | PostgreSQL 16 mới, không phải DB triển khai chính. |
 | Frontend production build/TypeScript | Qua | Mã nguồn biên dịch và tạo trang production. |
-| Browser regression | 5 ca qua, 0 lỗi | URL, lỗi API, audit export, paging, picker mobile; có fixture mạng để cô lập UI. |
+| Browser regression | 12 ca qua, 0 lỗi | URL, audit export, paging, picker mobile; F20–F24 gồm xác nhận theo dự án, lỗi 500/404, ngân hàng và ứng viên; fixture mạng cô lập UI. |
 
 **Không cộng hai lớp kiểm thử thành một kiểm thử end-to-end sáu role.** Backend dùng PostgreSQL/Redis/RabbitMQ riêng và dịch vụ nghiệp vụ thật; kiểm thử browser kiểm hành vi frontend với phản hồi mạng được kiểm soát. Chưa chạy tất cả UI trực tiếp với API/database triển khai thật.
 
@@ -145,7 +151,7 @@ Quy ước **D**: có phần triển khai hoàn chỉnh và kiểm chứng đạ
 | X5 | Excel CFO/Accountant đối soát | D | Nhập sao kê chỉ ghi chứng cứ; xuất dòng sao kê và kết quả tổng hợp. |
 | X6 | Export sổ và sáu role | D | Bổ sung phạm vi/filter, xuất audit mọi trang, ma trận báo cáo và scope an toàn. |
 | D1 | Tài liệu | D | Đồng bộ trạng thái, API mới, ma trận và giới hạn kiểm chứng. |
-| V1 | Nghiệm thu tổng thể | P | 18 test backend + 5 browser test đại diện; chưa UAT toàn bộ sáu role trên dữ liệu triển khai. |
+| V1 | Nghiệm thu tổng thể | P | 20 test backend + 12 browser test đại diện; chưa UAT toàn bộ sáu role trên dữ liệu triển khai. |
 
 ## 9. Những việc còn lại để bàn giao toàn bộ
 

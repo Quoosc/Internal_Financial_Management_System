@@ -1,5 +1,11 @@
 # Tiến độ phát triển Frontend
 
+> **Sau sửa 23/10 — F20–F24:** xác nhận/PIN đối chiếu theo dự án được xóa khi
+> đổi phạm vi; chi tiết tách lỗi tải/404; đối soát ngân hàng có retry và chặn
+> kết luận khi API lỗi; nhãn cân bằng theo phạm vi; bộ chọn ngân hàng phân trang,
+> tìm mã/ngày/số tiền. 20 test backend + 12 browser qua, build production qua.
+> Xem [review mới nhất](ledger-implementation-review.md).
+
 > **Cập nhật sổ cái 23/10/2026:** đã nối API thật cho journal, sổ tài khoản,
 > tạm ứng/ngân sách phân trang và các bộ Excel theo quyền; hoàn thiện URL bộ
 > lọc, audit XLSX, báo cáo theo vai trò và trạng thái lỗi. Kết quả và phạm vi
