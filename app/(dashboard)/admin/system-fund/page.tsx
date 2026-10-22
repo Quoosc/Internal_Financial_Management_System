@@ -7,11 +7,12 @@ import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/contexts/toast-context";
 import {
   getCompanyFund,
+  getTopupCandidates,
   getReconciliationReport,
   topupCompanyFund,
   updateBankStatement,
 } from "@/lib/api";
-import { CompanyFundResponse, ReconciliationReportResponse, RoleName } from "@/types";
+import { BankTopupCandidate, CompanyFundResponse, ReconciliationReportResponse, RoleName } from "@/types";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { SideDrawer } from "@/components/ui/side-drawer";
@@ -31,7 +32,8 @@ export default function AdminSystemFundPage() {
 
   const [topupAmount, setTopupAmount] = useState("");
   const [topupDescription, setTopupDescription] = useState("");
-  const [topupReferenceCode, setTopupReferenceCode] = useState("");
+  const [topupEvidenceId, setTopupEvidenceId] = useState("");
+  const [topupCandidates, setTopupCandidates] = useState<BankTopupCandidate[]>([]);
   const [statementBalance, setStatementBalance] = useState("");
   const [statementTime, setStatementTime] = useState("");
   const [statementEvidence, setStatementEvidence] = useState("");
@@ -53,6 +55,16 @@ export default function AdminSystemFundPage() {
       setCompanyFund(fundRes.data);
       setReconciliation(reconRes.data);
       setStatementBalance(String(fundRes.data.externalBankBalance ?? 0));
+      if (fundRes.data.bankAccount) {
+        try {
+          const candidates = await getTopupCandidates();
+          setTopupCandidates(candidates.data);
+        } catch {
+          setTopupCandidates([]);
+        }
+      } else {
+        setTopupCandidates([]);
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         toast.error(err.apiMessage);
@@ -70,7 +82,7 @@ export default function AdminSystemFundPage() {
   }, [canManageFund, loadData]);
 
   const handleTopup = async () => {
-    if (!topupReferenceCode.trim()) { toast.error("Cần nhập mã chứng từ/chuyển khoản ngân hàng."); return; }
+    if (!topupEvidenceId) { toast.error("Cần chọn dòng sao kê IN/BOOKED chưa sử dụng."); return; }
     const amount = Number(topupAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
       toast.error("Số tiền nạp không hợp lệ.");
@@ -82,13 +94,13 @@ export default function AdminSystemFundPage() {
     try {
       await topupCompanyFund({
         amount,
+        bankEvidenceId: Number(topupEvidenceId),
         description: topupDescription.trim() || undefined,
-        paymentRef: topupReferenceCode.trim() || undefined,
       });
       setShowTopupModal(false);
       setTopupAmount("");
       setTopupDescription("");
-      setTopupReferenceCode("");
+      setTopupEvidenceId("");
       toast.success("Đã nạp tiền vào quỹ hệ thống.");
       await loadData();
     } catch (err) {
@@ -317,7 +329,16 @@ export default function AdminSystemFundPage() {
             />
           </div>
           <InputField label="Ghi chú" value={topupDescription} onChange={setTopupDescription} placeholder="Mô tả giao dịch" />
-          <InputField label="Mã tham chiếu ngân hàng" value={topupReferenceCode} onChange={setTopupReferenceCode} placeholder="VD: VCB-2026-001" />
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">Dòng sao kê tiền vào đã ghi nhận</label>
+            <select className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm" value={topupEvidenceId} onChange={event => setTopupEvidenceId(event.target.value)}>
+              <option value="">Chọn chứng từ ngân hàng chưa sử dụng</option>
+              {topupCandidates.map(candidate => <option key={candidate.id} value={candidate.id}>
+                {candidate.bankReference} · {formatCurrency(candidate.amount)} · {candidate.bookingDate}
+              </option>)}
+            </select>
+            {topupCandidates.length === 0 && <p className="mt-2 text-xs text-amber-700">Chưa có sao kê IN/BOOKED chưa sử dụng. Hãy nhập sao kê và xác nhận đã ghi nhận trước khi nạp quỹ.</p>}
+          </div>
         </div>
       </SideDrawer>
 

@@ -268,8 +268,16 @@ export interface ReconciliationReportResponse {
  */
 export interface SystemTopupRequest {
   amount: number;
-  paymentRef?: string;
+  bankEvidenceId: number;
   description?: string;
+}
+
+export interface BankTopupCandidate {
+  id: number;
+  bankReference: string;
+  bookingDate: string;
+  amount: number;
+  description: string | null;
 }
 
 /**
