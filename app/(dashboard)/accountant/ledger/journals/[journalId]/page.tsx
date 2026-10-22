@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ApiError, api } from "@/lib/api-client";
-import { useToast } from "@/contexts/toast-context";
+
 import { formatCurrency, formatDateTime, formatDate } from "@/lib/format";
 import { AccountingJournalDetail, AccountingJournalEvent } from "@/types";
 
@@ -26,20 +26,23 @@ const labels: Record<AccountingJournalEvent, string> = {
 export default function AccountantJournalDetailPage() {
   const params = useParams<{ journalId: string }>();
   const router = useRouter();
-  const toast = useToast();
+  const [error,setError]=useState("");
+  const [reload,setReload]=useState(0);
   const [journal, setJournal] = useState<AccountingJournalDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);setJournal(null);setError("");
     api.get<AccountingJournalDetail>(`/api/v1/accountant/ledger/journals/${params.journalId}`)
       .then((response) => { if (active) setJournal(response.data); })
-      .catch((error) => { if (active) toast.error(error instanceof ApiError ? error.apiMessage : "Không tải được chi tiết bút toán."); })
+      .catch((error) => { if (active) setError(error instanceof ApiError && error.status===404 ? "Không tìm thấy bút toán." : error instanceof ApiError ? error.apiMessage : "Không tải được chi tiết bút toán."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [params.journalId, toast]);
+  }, [params.journalId, reload]);
 
   if (loading) return <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-500">Đang tải bút toán…</div>;
+  if(error)return <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-sm text-rose-800">{error}<button className="ml-4 underline" onClick={()=>setReload(n=>n+1)}>Thử lại</button></div>;
   if (!journal) return <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-8 text-center"><p className="text-sm text-slate-600">Không tìm thấy bút toán.</p><Link href="/accountant/ledger" className="text-sm font-semibold text-blue-700">Quay lại sổ cái</Link></div>;
 
   return <div className="space-y-5 pb-8">

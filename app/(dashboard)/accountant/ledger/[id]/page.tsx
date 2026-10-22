@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
 import { ApiError, api } from "@/lib/api-client";
-import { useToast } from "@/contexts/toast-context";
+
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import {
   AccountantTransactionDetailResponse,
@@ -133,7 +133,8 @@ function getReferenceLink(txn: AccountantTransactionDetailResponse): { label: st
 
 export default function AccountantLedgerDetailPage({ params }: PageProps) {
   const { id } = use(params);
-  const toast = useToast();
+  const [error,setError]=useState("");
+  const [reload,setReload]=useState(0);
 
   const [txn, setTxn]       = useState<AccountantTransactionDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -142,7 +143,7 @@ export default function AccountantLedgerDetailPage({ params }: PageProps) {
     let cancelled = false;
 
     const load = async () => {
-      setLoading(true);
+      setLoading(true);setTxn(null);setError("");
 
       try {
         const res = await api.get<AccountantTransactionDetailResponse>(`/api/v1/accountant/ledger/${id}`);
@@ -150,7 +151,7 @@ export default function AccountantLedgerDetailPage({ params }: PageProps) {
         setTxn(res.data);
       } catch (err) {
         if (cancelled) return;
-        toast.error(err instanceof ApiError ? err.apiMessage : "Không thể tải dữ liệu giao dịch.");
+        setError(err instanceof ApiError && err.status===404 ? "Không tìm thấy giao dịch." : err instanceof ApiError ? err.apiMessage : "Không thể tải dữ liệu giao dịch.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -158,7 +159,7 @@ export default function AccountantLedgerDetailPage({ params }: PageProps) {
 
     void load();
     return () => { cancelled = true; };
-  }, [id, toast]);
+  }, [id, reload]);
 
   const refLink = useMemo(() => (txn ? getReferenceLink(txn) : null), [txn]);
 
@@ -184,6 +185,7 @@ export default function AccountantLedgerDetailPage({ params }: PageProps) {
     );
   }
 
+  if(error)return <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-sm text-rose-800">{error}<button className="ml-4 underline" onClick={()=>setReload(n=>n+1)}>Thử lại</button></div>;
   if (!txn) {
     return (
       <div className="space-y-4">

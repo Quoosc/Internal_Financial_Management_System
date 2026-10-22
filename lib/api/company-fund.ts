@@ -5,7 +5,6 @@
 import { api } from "@/lib/api-client";
 import type {
   CompanyFundResponse,
-  BankTopupCandidate,
   ReconciliationReportResponse,
   SystemTopupRequest,
   UpdateBankStatementRequest,
@@ -20,11 +19,6 @@ export async function getCompanyFund() {
 /** POST /api/v1/company-fund/topup — Nạp tiền vào quỹ */
 export async function topupCompanyFund(data: SystemTopupRequest) {
   return api.post<TransactionResponse>("/api/v1/company-fund/topup", data);
-}
-
-/** Only unused IN/BOOKED statement lines can fund the company wallet. */
-export async function getTopupCandidates() {
-  return api.get<BankTopupCandidate[]>("/api/v1/accountant/ledger/bank-evidence/topup-candidates");
 }
 
 /** PUT /api/v1/company-fund/bank-statement — Cập nhật sao kê ngân hàng */

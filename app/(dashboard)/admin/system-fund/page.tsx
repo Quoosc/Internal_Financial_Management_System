@@ -1,18 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { BankCandidatePicker } from "@/components/accounting/bank-candidate-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/contexts/toast-context";
 import {
   getCompanyFund,
-  getTopupCandidates,
   getReconciliationReport,
   topupCompanyFund,
   updateBankStatement,
 } from "@/lib/api";
-import { BankTopupCandidate, CompanyFundResponse, ReconciliationReportResponse, RoleName } from "@/types";
+import { CompanyFundResponse, ReconciliationReportResponse, RoleName } from "@/types";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { SideDrawer } from "@/components/ui/side-drawer";
@@ -27,7 +27,6 @@ export default function AdminSystemFundPage() {
 
   const [loading, setLoading] = useState(true);
   const [loadError,setLoadError]=useState("");
-  const [candidateError,setCandidateError]=useState("");
 
   const [showTopupModal, setShowTopupModal] = useState(false);
   const [showStatementModal, setShowStatementModal] = useState(false);
@@ -35,7 +34,6 @@ export default function AdminSystemFundPage() {
   const [topupAmount, setTopupAmount] = useState("");
   const [topupDescription, setTopupDescription] = useState("");
   const [topupEvidenceId, setTopupEvidenceId] = useState("");
-  const [topupCandidates, setTopupCandidates] = useState<BankTopupCandidate[]>([]);
   const [statementBalance, setStatementBalance] = useState("");
   const [statementTime, setStatementTime] = useState("");
   const [statementEvidence, setStatementEvidence] = useState("");
@@ -46,7 +44,7 @@ export default function AdminSystemFundPage() {
   const loadData = useCallback(async () => {
     if (!canManageFund) return;
 
-    setLoading(true); setLoadError(""); setCandidateError(""); setCompanyFund(null); setReconciliation(null);
+    setLoading(true); setLoadError(""); setCompanyFund(null); setReconciliation(null);
 
     try {
       const [fundRes, reconRes] = await Promise.all([
@@ -57,16 +55,6 @@ export default function AdminSystemFundPage() {
       setCompanyFund(fundRes.data);
       setReconciliation(reconRes.data);
       setStatementBalance(String(fundRes.data.externalBankBalance ?? 0));
-      if (fundRes.data.bankAccount) {
-        try {
-          const candidates = await getTopupCandidates();
-          setTopupCandidates(candidates.data);
-        } catch (err) {
-          setTopupCandidates([]);setCandidateError(err instanceof ApiError?err.apiMessage:"Không tải được danh sách chứng từ nạp quỹ.");
-        }
-      } else {
-        setTopupCandidates([]);
-      }
     } catch (err) {
       setLoadError(err instanceof ApiError?err.apiMessage:"Không thể tải dữ liệu quỹ hệ thống.");
     } finally {
@@ -169,7 +157,6 @@ export default function AdminSystemFundPage() {
   if(loadError||!companyFund||!reconciliation)return <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-800">{loadError||"Dữ liệu quỹ chưa được trả về đầy đủ."}<button className="ml-3 underline" onClick={()=>void loadData()}>Thử lại</button></div>;
   return (
     <div className="space-y-6">
-      {candidateError&&<div role="alert" className="rounded-xl bg-rose-50 p-4 text-sm text-rose-800">{candidateError}<button className="ml-3 underline" onClick={()=>void loadData()}>Tải lại chứng từ</button></div>}
       <section className="overflow-hidden rounded-3xl border border-blue-200 bg-linear-to-br from-blue-700 via-blue-600 to-indigo-700 p-6 text-white shadow-xl shadow-blue-900/10">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
@@ -186,7 +173,7 @@ export default function AdminSystemFundPage() {
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => setShowTopupModal(true)}
+              onClick={() => {setTopupEvidenceId("");setShowTopupModal(true);}}
               className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-blue-700 shadow-lg shadow-blue-950/10 transition hover:bg-blue-50"
             >
               Nạp tiền từ ngân hàng
@@ -211,7 +198,7 @@ export default function AdminSystemFundPage() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => setShowTopupModal(true)}
+            onClick={() => {setTopupEvidenceId("");setShowTopupModal(true);}}
             className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold"
           >
             Nạp tiền từ ngân hàng
@@ -332,13 +319,8 @@ export default function AdminSystemFundPage() {
           <InputField label="Ghi chú" value={topupDescription} onChange={setTopupDescription} placeholder="Mô tả giao dịch" />
           <div>
             <label className="mb-2 block text-sm font-semibold text-slate-700">Dòng sao kê tiền vào đã ghi nhận</label>
-            <select className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm" value={topupEvidenceId} onChange={event => setTopupEvidenceId(event.target.value)}>
-              <option value="">Chọn chứng từ ngân hàng chưa sử dụng</option>
-              {topupCandidates.map(candidate => <option key={candidate.id} value={candidate.id}>
-                {candidate.bankReference} · {formatCurrency(candidate.amount)} · {candidate.bookingDate}
-              </option>)}
-            </select>
-            {!candidateError && topupCandidates.length === 0 && <p className="mt-2 text-xs text-amber-700">Chưa có sao kê IN/BOOKED chưa sử dụng. Hãy nhập sao kê và xác nhận đã ghi nhận trước khi nạp quỹ.</p>}
+            {showTopupModal&&<BankCandidatePicker endpoint="/api/v1/accountant/ledger/bank-evidence/topup-candidates" value={topupEvidenceId} onChange={setTopupEvidenceId} topup disabled={topupSubmitting}/>}
+
           </div>
         </div>
       </SideDrawer>
