@@ -1,5 +1,16 @@
 # IFMS — review triển khai sổ cái và Excel
 
+> **Cập nhật 23/10/2026:** Đã triển khai F16 (khôi phục bộ lọc Excel từ URL),
+> F17 (audit và xuất toàn bộ kết quả lọc), F18 (event sổ tài khoản), bốn báo cáo
+> theo vai trò, bộ chọn tên/mã có phân quyền, phân trang tạm ứng/ngân sách và
+> trạng thái lỗi API. PostgreSQL thử nghiệm áp dụng đủ V34; 18 integration test,
+> 5 browser test và frontend production build qua. Chi tiết và giới hạn ở
+> [báo cáo tuần](bao-cao-chi-tiet-tuan-vua-roi.md). Sáu nhóm việc vừa giao: 6/6;
+> toàn plan: 19/23 gói đạt mức triển khai và kiểm chứng đại diện (khoảng 83%).
+> Còn G0.1, G3.1, G4.2, V1. Bảng và các phát hiện ngày 22/10 bên dưới là ảnh
+> chụp trước đợt hoàn thiện này; các dòng ghi F16–F18 còn thiếu đã được thay thế
+> bởi trạng thái ở ghi chú này.
+
 **Ngày cập nhật review:** 22/10/2026.
 
 **Phạm vi:** working tree frontend và backend `LẬP TRÌNH JAVA/IFMS`, đối chiếu

@@ -1,5 +1,11 @@
 # Tiến độ phát triển Frontend
 
+> **Cập nhật sổ cái 23/10/2026:** đã nối API thật cho journal, sổ tài khoản,
+> tạm ứng/ngân sách phân trang và các bộ Excel theo quyền; hoàn thiện URL bộ
+> lọc, audit XLSX, báo cáo theo vai trò và trạng thái lỗi. Kết quả và phạm vi
+> còn lại xem [báo cáo chi tiết tuần](bao-cao-chi-tiet-tuan-vua-roi.md).
+> Bảng Sprint 16 bên dưới là ảnh chụp tháng 5, không mô tả đầy đủ phần sổ cái.
+
 > File này được cập nhật sau **mỗi lần hoàn thành task**.
 > Cập nhật lần cuối: **2026-05-31** (Sprint 16)
 

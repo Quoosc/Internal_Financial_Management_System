@@ -54,3 +54,6 @@ docs/*
 !docs/ledger-completion-and-excel-plan.md
 logs/
 test-results/
+
+!docs/ledger-implementation-review.md
+!docs/bao-cao-chi-tiet-tuan-vua-roi.md

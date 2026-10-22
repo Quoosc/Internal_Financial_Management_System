@@ -1,5 +1,34 @@
 # API_CONTRACT.md - Frontend/Backend Contract
 
+> **Phụ lục sổ cái 23/10/2026:** các contract kế toán/Excel bên dưới cập nhật
+> các mục lịch sử của file này. Xem [báo cáo triển khai](bao-cao-chi-tiet-tuan-vua-roi.md)
+> về mức kiểm chứng.
+
+## Contract sổ cái và Excel hiện hành
+
+Base path là `/api/v1`. Các API JSON dùng `ApiResponse<T>`; `PageResponse<T>`
+gồm `items`, `total`, `page`, `size`, `totalPages` và nhóm API dưới đây dùng
+**page bắt đầu từ 1**. File export trả XLSX.
+
+| API | Tham số chính | Kết quả / lưu ý |
+|---|---|---|
+| `GET /accountant/ledger/advances/outstanding` | `search`, `page=1`, `limit=20` | `PageResponse<AdvanceEmployeeSummaryResponse>`; nhóm theo nhân viên, mỗi nhân viên có từng khoản còn mở. |
+| `GET /accountant/ledger/budget-exposure` | `search`, `page=1`, `limit=20` | `PageResponse<LedgerProjectBudgetResponse>`; một dự án gồm giai đoạn và danh mục. |
+| `GET /accountant/ledger/journals` | `event`, `from`, `to`, `employeeId`, `projectId`, `requestId`, `page`, `limit` | `PageResponse<AccountingJournalItemResponse>`. |
+| `GET /accountant/ledger/accounts` | `account`, `event`, `from`, `to`, `employeeId`, `projectId`, `departmentId`, `phaseId`, `categoryId`, `page`, `limit` | `AccountLedgerResponse`; event áp dụng cả đầu kỳ, phát sinh và số dư chạy trong phạm vi đang lọc. |
+| `GET /admin/audit` | `actorId`, `actor` (tên/email), `action`, `entityName`, `from`, `to`, `page`, `limit` | `PageResponse<AuditLogResponse>`; cùng bộ lọc với file xuất. |
+| `GET /spreadsheets/lookups/{kind}` | `kind` = `employee`, `project`, `department`, `phase`, `category`, `request`; `search`, `id`, `parent`, `page=1`, `limit=20` | `PageResponse<{id,label}>`; quyền và phạm vi được áp dụng tại server, `id` dùng để khôi phục nhãn lựa chọn từ URL, `parent` giới hạn giai đoạn/danh mục/yêu cầu. |
+| `GET /spreadsheets/{dataset}/export` | `scope` và các bộ lọc dataset hỗ trợ | XLSX của toàn bộ kết quả phù hợp trong giới hạn server; vượt giới hạn báo lỗi, không cắt âm thầm. `audit-history` nhận bộ lọc audit, `account-balances` nhận `event`, `journals` nhận `requestId`. |
+| `GET /spreadsheets/exports/history` | — | Lịch sử xuất có kiểm soát quyền. |
+
+Bốn dataset báo cáo mới: `department-employees` và `department-budgets`
+(MANAGER/CFO/ACCOUNTANT); `project-cost-details`
+(MANAGER/TEAM_LEADER/CFO/ACCOUNTANT); `bank-reconciliation-summary`
+(CFO/ACCOUNTANT). Đây là **ảnh chụp số liệu hiện tại**, không nhận `from`/`to`.
+Bộ chọn tên/mã chỉ là cách nhập ID có kiểm soát, server vẫn kiểm tra scope khi xuất.
+
+---
+
 > Version: 4.0 (2026-05-31)
 > Source priority: backend runtime source code > backend docs > frontend docs
 > Roles: EMPLOYEE, TEAM_LEADER, MANAGER, ACCOUNTANT, CFO, ADMIN

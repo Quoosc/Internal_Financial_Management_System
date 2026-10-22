@@ -1,5 +1,13 @@
 # Sổ cái kế toán IFMS — tài liệu frontend
 
+> **Trạng thái 23/10/2026:** Màn hình sổ tài khoản nhận lọc nghiệp vụ, nhân viên,
+> dự án, phòng ban, giai đoạn và danh mục; trang Excel khôi phục bộ lọc từ URL.
+> Danh sách tạm ứng và ngân sách dùng phân trang từ server; bộ chọn tham chiếu
+> hiển thị tên/mã theo quyền truy cập. Audit xuất XLSX theo toàn bộ điều kiện lọc.
+> Xem [báo cáo tuần](bao-cao-chi-tiet-tuan-vua-roi.md) về kết quả kiểm chứng và
+> bốn phần plan chưa nghiệm thu hết. Các ghi chú ngày 10–21/10 dưới đây là
+> bối cảnh của giai đoạn triển khai trước.
+
 > **Cập nhật 21/10/2026:** Các mô tả bên dưới là nền nghiệp vụ ngày 10/10. Xem [trạng thái triển khai mới nhất](ledger-completion-and-excel-plan.md#9-nhật-ký-triển-khai-sau-khi-duyệt--cập-nhật-21102026) cho migration, kỳ, đối chiếu, Excel và phần chưa nghiệm thu.
 
 > [Review bổ sung F01–F11](ledger-implementation-review.md) ghi các lỗi và khoảng

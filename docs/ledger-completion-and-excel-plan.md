@@ -1,5 +1,13 @@
 # IFMS — rà soát sổ cái và kế hoạch hoàn thiện nghiệp vụ, giao diện, Excel
 
+> **Trạng thái 23/10/2026:** Sáu nhóm tồn đọng bổ sung đã triển khai và kiểm
+> chứng đại diện: F16–F18, ma trận báo cáo Manager/CFO/Accountant, bộ chọn
+> tham chiếu/phân trang và lỗi API. Tổng plan: 19/23 gói ở mức triển khai có
+> kiểm chứng đại diện; còn G0.1, G3.1, G4.2, V1. Xem
+> [báo cáo chi tiết tuần](bao-cao-chi-tiet-tuan-vua-roi.md) và
+> [review cập nhật](ledger-implementation-review.md). Các ghi chú 18–22/10
+> phía dưới mô tả trạng thái tại thời điểm đó.
+
 **Ngày rà soát:** 18/10/2026.
 **Trạng thái:** Đã được người dùng duyệt và đã triển khai phần chính. Phần 1–8 là ảnh chụp hiện trạng trước triển khai ngày 18/10; xem mục 9 để biết kết quả và việc còn lại ngày 21/10.
 **Code đối chiếu:** frontend `7f75d7d`; backend IFMS `2ecab5b`.
