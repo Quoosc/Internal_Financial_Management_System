@@ -1,15 +1,228 @@
 # IFMS — review triển khai sổ cái và Excel
 
-**Ngày review:** 21/10/2026.
+**Ngày cập nhật review:** 22/10/2026.
 
 **Phạm vi:** working tree frontend và backend `LẬP TRÌNH JAVA/IFMS`, đối chiếu
 với `ledger-completion-and-excel-plan.md` và các quyết định nghiệp vụ đã chốt.
 
-**Kết luận:** mô hình nghiệp vụ chính đã được triển khai đúng hướng IFMS,
-nhưng chưa đủ điều kiện đánh dấu hoàn thành toàn bộ kế hoạch. Có lỗi hồi quy,
-số liệu chưa đồng nhất giữa các role, kiểm soát đóng kỳ/nạp quỹ còn thiếu và
-ma trận Excel chưa đủ. Các phát hiện dưới đây dựa trên đọc code; không phải
-kết quả chạy lại UI hoặc các tình huống runtime trong lượt review này.
+## Tổng hợp toàn bộ plan theo code hiện tại — 22/10/2026
+
+Phạm vi gồm đợt triển khai đã push và các bản sửa còn trong working tree của hai repo.
+Các mục ngày 21/10 bên dưới được giữ làm lịch sử phát hiện, không phải trạng thái mới nhất.
+
+| Gói | Nội dung đã triển khai | Phần còn lại |
+|---|---|---|
+| G0 — Migration, nguồn dữ liệu | Giải quyết trùng V20 bằng V21 cho document extraction; V22–V33 bổ sung bảo vệ journal, nguồn/chứng từ, Excel, sao kê, lịch sử và audit. Seed/reset chỉ chạy demo; live bootstrap ví 0 và ADMIN qua cấu hình, có first-login/PIN. V34 bổ sung audit export. | V34 chưa migrate/nghiệm thu ở DB trong đợt sửa hiện tại; cần xác nhận Flyway và dữ liệu lịch sử từng môi trường. Tắt seed không xóa dữ liệu demo đã tồn tại. |
+| G1 — Request, reserve, payroll | Kiểm scope/quan hệ project-phase-category; giữ tiền theo request; khóa nguồn, ví, advance, kỳ lương; xử lý lặp. EXPENSE xác nhận ghi chi phí và khoản phải hoàn; trả tiền riêng. ADVANCE tạo dư phải quyết toán; REIMBURSE giảm dư bằng chứng từ, không chuyển tiền. Hoàn thật USER→PROJECT; payroll bù trừ FIFO và giới hạn hiện có. Chặn sửa/overwrite hồ sơ đã chi. | Chạy lại integration và các tình huống đồng thời sau các sửa mới; đối chiếu dữ liệu cũ. Không lấy compile làm bằng chứng mọi nhánh tài chính đã đạt. |
+| G2 — Journal, báo cáo, đối soát | Journal/header-lines riêng với nguồn, actor, ngày/kỳ, chiều dữ liệu và snapshot; ràng buộc cân bằng/bất biến; sổ tài khoản đầu-phát sinh-cuối kỳ. Nạp quỹ gắn IN/BOOKED chưa dùng, cùng tài khoản và số tiền. Tách tiền công ty khỏi ví cá nhân/FLOAT_MAIN; đối chiếu sao kê tại mốc. | Event của export sổ tài khoản vẫn bị bỏ qua; journal export chưa nhận đủ request filter; bộ chọn và phạm vi báo cáo/UI chưa đủ. Matching chưa có tìm kiếm/phân trang đầy đủ. |
+| G3 — Kỳ, sửa sai, chuyển đổi lịch sử | Preview trước đóng kỳ, kiểm lại dưới khóa; chỉ đóng tháng đã kết thúc. Đảo toàn phần liên kết gốc, chống trùng, kiểm ngày và kỳ gốc đóng. Backfill có nguồn/chứng cứ và preview; mở sổ phần chênh lệch, PIN, mốc chuyển đổi; đối chiếu counter với nguồn/journal, audit trước/sau. | Preview chưa là báo cáo đầy đủ mọi liên kết nguồn và ngoại lệ đối soát. Chưa nghiệm thu correction/mở sổ/PIN trên DB sau sửa, chưa chuyển đổi DB chính. |
+| G4 — Giao diện | Một dòng mỗi giao dịch ví; journal riêng; sổ tài khoản; tạm ứng nhóm theo nhân viên và từng khoản; ngân sách theo project-phase-category; trang nguồn/đóng kỳ/đối soát/backfill/counter. Giữ kiểu IFMS, sửa status/link/loading/error chính; route demo redirect. | ID thô và bộ lọc chiều dữ liệu còn thiếu; URL/state trang phụ chưa đồng nhất; một số API lỗi bị hiện thành empty; chưa kiểm desktop/mobile/sáu role. |
+| X0–X6 — Excel | Template .xlsx theo dữ liệu/quyền hiện tại; schema/kiểu ô/công thức/trùng; preview không ghi; commit cả lô, kiểm lại quyền, chống lặp; export server. Có các bộ nhập phòng ban/nhân sự/dự án/giai đoạn/thành viên/hạn mức/payroll/request/sao kê; các bộ xuất tương ứng, ví/yêu cầu/phiếu lương/journal/tạm ứng/báo cáo dự án; audit export và checksum ở V34. | Ma trận Manager/CFO/Accountant chưa đầy đủ. Audit CSV vẫn chỉ trang hiện tại; filter audit, event sổ tài khoản và khôi phục URL Excel còn lỗi. Cần nghiệm thu từng file/scope/filter, không chỉ có catalog dataset. |
+| D1 — Tài liệu | Đã có plan, định nghĩa nghiệp vụ, review và tài liệu backend; đánh dấu thiết kế cũ và tách mốc kiểm chứng. | Cần tiếp tục đồng bộ API/schema/ma trận quyền và kết quả chạy thực tế sau khi hoàn thiện các mục còn thiếu. |
+| V1 — Nghiệm thu | Đợt trước đã báo cáo 12 test và DB V33; đợt sửa mới nhất frontend production build/TypeScript và backend test-compile qua. | Chưa chạy integration mới nhất, chưa migrate V34 hoặc nghiệm thu UI/data chính. Test-compile chỉ biên dịch test, không chạy test. |
+
+### Bản sửa mới nhất đã có trong code
+
+- F12: scope phân quyền và filter người dùng ở export dư tạm ứng là hai nhóm điều kiện
+  nối AND, không dùng chung map có thể ghi đè scope.
+- F13: query ứng viên matching dùng GROUP BY để trả một ID/giao dịch, sắp xếp hợp lệ;
+  chưa chạy lại query qua endpoint/DB sau sửa.
+- F14: fixture tạo sao kê IN/BOOKED và dùng bankEvidenceId; build mới ở
+  `target-review-20261022` đã qua test-compile, thay kết quả thất bại ở mốc 21/10.
+- F15: chặn đóng tháng hiện tại ngay cả ngày cuối tháng.
+- F19/F07: xác thực PIN có transaction riêng và khóa dòng security settings;
+  đổi PIN cũng khóa cùng dòng. Chưa chạy test PIN sai đồng thời.
+- F02: sửa công thức Team Leader và đổi nhãn chi tiết thành ngân sách còn theo chi phí;
+  chưa có nghĩa mọi màn hình đã hiển thị đủ số dư ví/tiền giữ/tiền ví khả dụng.
+- F01/F03/F04/F05/F08: bỏ tạo ví khi update dự án, lấy dư tạm ứng từ AdvanceBalance,
+  kiểm cơ cấu hạn mức, nạp quỹ theo chứng cứ và bật ADMIN first-login đã có trong code.
+- F09–F11: đã bổ sung một số filter/export/audit/tham chiếu, giảm N+1 và tên scope;
+  các phần còn thiếu trong bảng trên chưa hoàn thành.
+- F16/F17/F18: còn tồn đọng. Đặc biệt dataset account-balances có parse event nhưng
+  không truyền event vào report service, nên chưa thể coi filter này là đã sửa.
+
+Lượt tổng hợp ngày 22/10 chỉ đọc code và cập nhật tài liệu. Không chạy lại build/test
+trong lượt này; kết quả build gần nhất là kết quả đã chạy trong lượt sửa trước đó.
+Không có kết quả integration mới để đánh dấu nghiệm thu toàn bộ. Các bản sửa sau push
+vẫn chưa commit/push. File trong target-review* là output build, không phải nguồn cần sửa.
+
+**Kết luận ban đầu:** mô hình nghiệp vụ chính đi đúng hướng IFMS nhưng lúc review
+còn lỗi hồi quy, số liệu chưa đồng nhất giữa các role và thiếu kiểm soát kế toán.
+Các phát hiện F01–F11 bên dưới là trạng thái trước khi sửa.
+
+## Kết quả kiểm tra lại sau sửa — 21/10/2026
+
+**Kết luận tại mốc 21/10: chưa hoàn thành 100% và chưa đạt điều kiện nghiệm thu toàn bộ plan.**
+Các luồng kế toán chính đã có code, nhưng còn lỗi phân quyền xuất dữ liệu, SQL đối soát,
+contract test, số liệu giữa các vai trò và trải nghiệm bộ lọc. Không quy đổi số file đã sửa
+thành tỷ lệ hoàn thành nghiệp vụ khi các điều kiện nghiệm thu còn chưa đạt.
+
+### Kiểm chứng thực tế trong lượt review này
+
+| Kiểm tra | Kết quả | Ý nghĩa |
+|---|---|---|
+| `npm run build` frontend | Qua, gồm TypeScript và tạo trang production | Không thay thế nghiệm thu trình duyệt hoặc luồng API. |
+| Backend `test-compile` từ thư mục build mới | **Không qua**: `FinancialWorkflowIntegrationTest.java:83` vẫn gọi `setPaymentRef()` đã bị bỏ | Main source biên dịch được nhưng bộ test hiện tại không biên dịch được; chưa thể chạy lại bộ nghiệp vụ hiện tại. |
+| Kiểm tra cú pháp truy vấn ứng viên đối soát bằng PostgreSQL 16 cô lập | **Không qua**: `for SELECT DISTINCT, ORDER BY expressions must appear in select list` | Cặp `SELECT DISTINCT t.id` / `ORDER BY t.created_at` ở repository không hợp lệ. Đã tái hiện lỗi cú pháp trên PostgreSQL, chưa gọi HTTP endpoint. |
+| Integration test cho các sửa mới | Chưa chạy | Chưa có môi trường `IFMS_TEST_DATABASE_URL` trong phiên; đồng thời cần sửa lỗi biên dịch test trước. |
+| V34, dữ liệu chính và UI sáu role | Chưa nghiệm thu | Chưa xác nhận Flyway V34 hoặc nội dung dữ liệu lịch sử tại database triển khai; chưa chạy UI bằng trình duyệt. |
+
+PostgreSQL dùng để xác minh cú pháp là container tạm, không gắn volume hay mở port và
+đã được xóa sau kiểm tra. Database của dự án không bị thay đổi. Thư mục build tạm mới
+`target-review-fresh-20261021` còn được giữ lại vì chính sách thực thi chặn lệnh dọn thư mục;
+đây là output build, không phải mã nguồn cần commit. Lượt review chỉ cập nhật báo cáo,
+chưa sửa các lỗi dưới đây.
+
+### Các phát hiện cần xử lý trước khi đánh dấu hoàn thành
+
+#### F12 — P0: bộ lọc xuất dư tạm ứng ghi đè phạm vi phân quyền
+
+- Trong `AccountingExcelConfiguration.java:69–80`, role EMPLOYEE được giới hạn
+  `user.id` của chính mình, MANAGER theo phòng ban, TEAM_LEADER theo danh sách dự án.
+  Sau đó các bộ lọc từ request lại `put()` lên chính khóa trong cùng một map.
+- Ví dụ: nhân viên A gửi `GET /api/v1/spreadsheets/advance-balances/export?employeeId=B`
+  có thể thay điều kiện `user.id=A` bằng `user.id=B`. Team Leader thay `projectId`,
+  Manager thay `departmentId` cũng có cùng lỗ hổng. `ExportExcelDataset.authorize()`
+  không kiểm lại các filter này; việc kiểm role ở `SpreadsheetService` không chặn được.
+- Ảnh hưởng: đọc được thông tin dư tạm ứng ngoài phạm vi bằng file xuất. Không có
+  bằng chứng sửa số dư qua lỗ hổng này; đây là lỗi truy cập dữ liệu tài chính.
+- Sửa: tạo điều kiện phân quyền bất biến và nối **AND** với filter người dùng;
+  filter chỉ thu hẹp scope. Test âm cho EMPLOYEE, MANAGER và TEAM_LEADER.
+- Mức xác minh: xác định trực tiếp từ luồng authorize và cách tạo Specification;
+  chưa chạy HTTP với hai tài khoản thật.
+
+#### F13 — P1: SQL gợi ý khớp sao kê bị PostgreSQL từ chối
+
+- `TransactionRepository.java:30–36` chọn `DISTINCT t.id` nhưng sắp xếp theo
+  `t.created_at`, trường không nằm trong danh sách SELECT DISTINCT.
+- PostgreSQL 16 đã trả đúng lỗi cú pháp ở bảng kiểm chứng phía trên. Luồng
+  `BankEvidenceService.candidates()` gọi repository này nên có thể lỗi 500 khi
+  mở danh sách giao dịch để đối soát, kể cả trước bước lọc chiều tiền trong Java.
+- Sửa: dùng `EXISTS` để loại nhu cầu DISTINCT, hoặc chọn/sắp xếp bằng projection
+  hợp lệ; đưa chiều tiền, mã và phân trang vào query. Kiểm chứng với DB thực tế.
+
+#### F14 — P1: test chưa cập nhật theo API nạp quỹ mới
+
+- `SystemTopupRequest` đã chuyển sang `bankEvidenceId`, nhưng fixture ở
+  `FinancialWorkflowIntegrationTest.java:83` còn `setPaymentRef()`.
+- Build mới bằng `mvnw.cmd -q -DskipTests test-compile` với một thư mục đầu ra mới
+  dừng ở `cannot find symbol: setPaymentRef`. Build incremental ở thư mục cũ
+  đã trả thành công, nên không dùng riêng kết quả đó để kết luận bộ test còn hợp lệ.
+- Sửa fixture: cấu hình tài khoản, tạo chứng cứ IN/BOOKED trong DB cô lập rồi
+  truyền ID; bổ sung nhánh thiếu/sai/đã dùng chứng cứ và chạy lại test từ build mới.
+
+#### F15 — P1: vẫn cho đóng tháng hiện tại ngay trong ngày cuối tháng
+
+- `AccountingPeriodService.java:74` chỉ chặn khi ngày cuối tháng **sau** hôm nay.
+  Ngay ngày cuối tháng, hai ngày bằng nhau và điều kiện không chặn, dù ngày chưa kết thúc.
+- Ví dụ: 10 giờ sáng 31/10 có thể đóng tháng 10, làm các nghiệp vụ còn lại trong
+  ngày bị trigger kỳ đóng từ chối. Điều này trái quy tắc chỉ đóng kỳ đã kết thúc.
+- Sửa: yêu cầu tháng cần đóng nhỏ hơn tháng hiện tại theo timezone nghiệp vụ;
+  kiểm tra cả ngày đầu tháng sau và ngày cuối tháng hiện tại.
+- Preview hiện kiểm metadata nguồn khác null và topup đã khớp BOOKED; chưa phải
+  báo cáo đầy đủ mọi liên kết nguồn, chênh lệch đối soát và ngoại lệ theo mục 4.3 plan.
+
+#### F02 — còn một phần: nhãn quỹ khả dụng vẫn trộn với ngân sách
+
+- Công thức backend đã được sửa nhưng vẫn xuất phát từ `Project.availableBudget`
+  và bộ đếm chi phí, không từ số dư/tiền giữ của Wallet.
+- Trang Team Leader `projects/[id]/page.tsx:844` còn mô tả “Số tiền thực tế dự án
+  đang có thể sử dụng”. ADVANCE trong `RequestServiceImpl.java:967` chuyển ví và
+  tạo dư tạm ứng, không trừ bộ đếm ngân sách như một khoản chi phí.
+- Ví dụ: dự án nhận 10 triệu, giải ngân tạm ứng 3 triệu, chưa có chứng từ chi phí:
+  ví dự án còn 7 triệu nhưng chỉ tiêu ngân sách có thể vẫn là 10 triệu. Gọi cả hai
+  là tiền có thể chi khiến Accountant và Team Leader thấy số khác nhau.
+- Sửa: hiển thị riêng ngân sách còn lại, tiền ví, tiền giữ, tiền ví khả dụng và
+  tạm ứng còn mở; dùng cùng nguồn/nhãn giữa role và file xuất.
+
+#### F16 — P2: trang Excel có thể xóa tham số URL trước khi khôi phục
+
+- `data-exchange/page.tsx:44` đọc tham số dataset sau khi catalog tải xong,
+  nhưng effect `replaceState` ở dòng 77–83 chạy ngay lần mount với state rỗng.
+  Effect này có thể thay URL thành `?dataset=` trước khi callback tải catalog đọc URL.
+- Link từ đối soát sang `?dataset=bank-statements`, scope và filter được chia sẻ
+  có thể mất, khiến trang chọn bộ dữ liệu đầu tiên thay vì bộ được yêu cầu.
+- Sửa: đọc URL ban đầu một lần trước khi đồng bộ state, và chỉ ghi URL khi đã
+  hoàn tất khởi tạo. Kiểm tra mở link trực tiếp, refresh và back/forward.
+- Mức xác minh: từ thứ tự effect/callback trong code; chưa chạy trình duyệt.
+
+#### F17 — P2: bộ lọc nhật ký kiểm toán không khớp API
+
+- UI `admin/audit-logs/page.tsx:393–396` gửi `actor`, `startDate`, `endDate`;
+  controller `AdminAuditController.java:27–31` nhận `actorId`, `from`, `to`.
+- Không có bước đổi tên trong API client. Backend có thể bỏ qua các tham số lạ,
+  trả 200 và dữ liệu không được lọc như người dùng nghĩ. Lọc action vẫn có cùng tên.
+- Nút CSV vẫn lấy `items` của trang hiện tại. Dataset `audit-history` dùng
+  `ExcelExportSpecification` theo ngày, chưa có bộ lọc actor/action tương ứng UI.
+- Sửa contract và semantics tìm người thao tác, dùng chung filter list/export;
+  xuất đủ các trang từ backend và ghi nhật ký export.
+
+#### F18 — P2: filter loại nghiệp vụ bị bỏ qua khi xuất sổ tài khoản
+
+- Trang Excel dùng chung `accountingFilters` cho `journals` và `account-balances`,
+  gửi `event` cho cả hai. Dataset `account-balances` ở `AccountingExcelConfiguration.java:41`
+  gọi `getLedger()` không có đối số event; report service cũng chưa hỗ trợ điều kiện này.
+- Chọn một loại nghiệp vụ vẫn có thể xuất tổng mọi loại. Journal export đã nhận event
+  nhưng chưa nhận requestId như bộ lọc của màn hình journal.
+- Sửa: chỉ hiển thị filter được backend hỗ trợ, hoặc triển khai đồng nhất filter
+  qua API/aggregate/export; kiểm tổng trên cùng bộ lọc.
+
+#### F19 — P1: PIN sai đồng thời vẫn có nguy cơ mất lượt đếm
+
+- `ProfileServiceImpl.java:196–218` đã dùng REQUIRES_NEW, sửa được việc retryCount
+  rollback cùng nghiệp vụ ngoài. Tuy nhiên vẫn đọc bằng `findById`, tăng trong Java
+  rồi save; repository không khóa bản ghi và entity/BaseEntity không có version.
+- Hai lần sai đồng thời có thể cùng đọc 0 rồi cùng ghi 1; REQUIRES_NEW không tự
+  tuần tự hóa cập nhật cùng tài khoản. Điều kiện khóa PIN vì thế chưa được bảo đảm
+  khi có yêu cầu song song. Đây là rủi ro từ code, chưa tái hiện bằng test đồng thời.
+- Sửa: khóa dòng security settings hoặc cập nhật đếm nguyên tử trong transaction
+  riêng; kiểm cả nhập sai song song, khóa và luồng tài chính không ghi khi PIN sai.
+
+### Phần còn thiếu so với plan
+
+- Excel chưa đủ ma trận: nhân sự/ngân sách phòng ban cho Manager, báo cáo chi phí
+  theo giai đoạn/danh mục và đối soát tổng hợp theo scope. Một file tổng dự án
+  không thay thế được các báo cáo chi tiết đã duyệt.
+- Danh sách tạm ứng/ngân sách vẫn trả toàn bộ; matching chưa có tìm mã/phân trang
+  đầy đủ. Đã giảm một số N+1 nhưng chưa hoàn thành yêu cầu dữ liệu lớn.
+- Journal còn yêu cầu ID thô; sổ tài khoản chưa đưa đủ các chiều lên UI; các trang
+  phụ chưa đồng nhất state URL. Lịch sử export cũng chưa tải lại ngay sau lần xuất.
+- Lịch sử export và danh sách chứng từ nạp quỹ có nhánh bắt lỗi API rồi trả danh sách
+  rỗng. Lỗi schema/API có thể bị trình bày thành “chưa có dữ liệu”; cần tách lỗi và empty.
+- Chưa nghiệm thu V34, bootstrap/PIN, ngân hàng, correction và import/export đủ
+  sáu role trên DB cô lập/bản sao lịch sử; chưa kiểm tra desktop/mobile bằng browser.
+- Ledger đã gọi API thật và route demo chỉ redirect. Điều đó chưa xác nhận DB
+  không còn dữ liệu seed cũ hoặc chứng từ lịch sử đã đủ; phải kiểm nội dung dữ liệu.
+
+**Thứ tự xử lý tiếp:** F12 → F13/F14 → F15/F19/F02 → F09–F11/F16–F18 → migration,
+integration và nghiệm thu UI/dữ liệu. Giữ nguyên các quyết định EXPENSE, ADVANCE,
+REIMBURSE, hoàn thật và bù trừ lương; phần cần hoàn thiện là kiểm soát triển khai,
+định nghĩa hiển thị, phân quyền và kiểm chứng các luồng đã chốt.
+
+## Trạng thái sau đợt sửa tiếp theo — mốc trước lần kiểm tra lại
+
+Các thay đổi này được thực hiện sau khi bốn commit frontend và hai commit IFMS
+đã push. Code sửa dưới đây hiện còn trong working tree, chưa tạo commit/push mới.
+
+| ID | Trạng thái | Thay đổi đã làm và phần cần xác minh |
+|---|---|---|
+| F01 | Đã sửa | Chỉ tạo ví khi tạo dự án; update không gọi tạo ví. Cần kiểm tra luồng sửa/kích hoạt trên DB runtime. |
+| F02 | Đã sửa một phần | Công thức đã cùng Manager nhưng nhãn “quỹ khả dụng” vẫn mô tả tiền có thể chi dù lấy từ bộ đếm ngân sách. Xem phát hiện F02 trong lần kiểm tra lại. |
+| F03 | Đã sửa | Manager dùng tổng dư tạm ứng còn lại trong phòng ban; Team Leader dùng đúng khoản của nhân sự trong dự án thuộc scope của mình. |
+| F04 | Đã sửa | Cập nhật giai đoạn kiểm tổng hạn mức các giai đoạn và tổng hạn mức danh mục trong giai đoạn; CategoryBudget API/import đã có kiểm tổng danh mục. |
+| F05 | Đã sửa | Nạp quỹ bắt buộc chọn chứng từ sao kê IN/BOOKED, chưa dùng, đúng tài khoản và số tiền; ghi ví, journal và khớp sao kê trong một transaction. UI cho chọn chứng từ đã nhập. |
+| F06 | Đã sửa ở mức code | Có preview trước đóng kỳ, kiểm journal cân bằng/nguồn/sao kê topup; đóng kỳ kiểm lại. Đảo không lùi trước bút toán gốc và khoản từ kỳ khóa phải ghi trong kỳ hiện tại. Cần chạy migration/runtime và tình huống kỳ thật. |
+| F07 | Đã sửa ở mức code | Xác thực PIN chạy transaction riêng để lần nhập sai/khóa PIN còn được lưu; transaction tài chính vẫn rollback khi PIN sai. Chưa chạy integration test PIN liên tiếp. |
+| F08 | Đã sửa ở mức code | ADMIN bootstrap bật first-login setup; Auth không loại ADMIN khỏi bước đặt PIN lần đầu. Cần nghiệm thu onboarding trên môi trường rỗng. |
+| F09 | Đã sửa một phần | Export nhật ký/sổ tài khoản nhận filter account/event/các chiều; URL giữ bộ lọc. Có nhật ký export actor/scope/filter/số dòng/SHA-256. Export CSV audit trang cũ và picker theo tên vẫn còn. |
+| F10 | Đã sửa một phần | Thêm tham chiếu phase/category khi nhân viên nhập request, danh sách Manager rảnh khi tạo phòng ban, dataset dư tạm ứng theo từng nhân viên/khoản cho cả 6 role, nhật ký xuất. Ma trận báo cáo theo Manager/CFO/Accountant và mọi scope vẫn cần hoàn thiện. |
+| F11 | Đã sửa một phần | Giảm N+1 ở danh sách dư tạm ứng và ngân sách; đối chiếu chi phí hiện tên phase/category; matching chỉ lấy giao dịch doanh nghiệp chưa khớp và tăng giới hạn ứng viên. Vẫn thiếu pagination/search thật, bộ lọc bằng picker tên/mã và kiểm tra browser/mobile. |
+
+Backend Maven compile main và frontend production build đã qua sau nhóm sửa gần nhất.
+Lần kiểm tra lại bằng build mới phát hiện test-compile không qua; xem F14 phía trên.
+Không có database `ledger_review` được cấu hình trong phiên này nên chưa chạy lại
+integration test hoặc migrate V34 trên database. Database triển khai chính chưa bị
+động tới. Vì vậy F06–F08 và migration V34 vẫn cần kiểm chứng runtime trước bàn giao.
 
 ## 1. Phần đã triển khai và có thể giữ lại
 
@@ -34,9 +247,9 @@ kết quả chạy lại UI hoặc các tình huống runtime trong lượt revi
 
 ## 2. Lỗi và thiếu sót xác định từ code
 
-P1: cần xử lý trước nghiệm thu nghiệp vụ. P2: phần còn thiếu về sử dụng,
-tính nhất quán hoặc khả năng xử lý dữ liệu. Trạng thái mọi mục bên dưới:
-**chưa sửa trong lượt review này**.
+P1: các lỗi nghiệp vụ cần được xử lý trước nghiệm thu. P2: phần còn thiếu về
+khả năng sử dụng, tính nhất quán hoặc xử lý dữ liệu. Mục dưới đây ghi lại chi tiết
+phát hiện ban đầu; xem bảng trạng thái phía trên để biết nội dung nào đã sửa.
 
 ### F01 — P1: cập nhật dự án gọi tạo lại ví đã có
 

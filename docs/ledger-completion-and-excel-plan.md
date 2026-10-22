@@ -5,9 +5,14 @@
 **Code đối chiếu:** frontend `7f75d7d`; backend IFMS `2ecab5b`.
 **Repo backend đúng:** `D:/UIT/HK6 UIT/LẬP TRÌNH JAVA/IFMS`.
 
+> **Trạng thái mới nhất 22/10/2026:** xem bảng tổng hợp G0–G4, X0–X6, D1, V1
+> trong [review triển khai](ledger-implementation-review.md). Các sửa F12/F13/F14/F15/F19
+> đã có ở code; test-compile mới qua. F16–F18 và một phần F02/F09–F11 còn tồn đọng.
+> Chưa chạy integration mới nhất hoặc nghiệm thu V34/UI. Mục 9 là nhật ký mốc trước.
+
 > **Review bổ sung 21/10:** [Review triển khai và các lỗi còn lại](ledger-implementation-review.md)
-> xác định F01–F11, gồm cập nhật dự án tạo lại ví, số liệu Team Leader/Manager,
-> kiểm hạn mức, chứng cứ nạp quỹ mới, đóng kỳ, PIN và phạm vi Excel/UI.
+> ghi nhận trạng thái F01–F11 sau sửa và các phát hiện F12–F19: phân quyền export,
+> SQL đối soát, test chưa khớp API mới, đóng kỳ, PIN đồng thời và filter/UI.
 > Chưa đủ điều kiện đánh dấu hoàn thành mục 7; kết quả build/test trước đó
 > không bao phủ các phát hiện mới này.
 
@@ -217,18 +222,18 @@ Khi bắt đầu triển khai sau phê duyệt, G0 là kiểm tra lịch sử Fl
 
 ## 9. Nhật ký triển khai sau khi duyệt — cập nhật 21/10/2026
 
-Các bảng và lỗi R01–R19 ở trên là **mốc trước sửa**. Trạng thái sau sửa dưới đây dựa trên code đang nằm ở hai working tree, chưa commit/chưa đẩy lên remote.
+Các bảng và lỗi R01–R19 ở trên là **mốc trước đợt triển khai đầu**. Commit triển khai đầu đã push ngày 21/10/2026. Các sửa tiếp theo trong bảng review F01–F11 hiện nằm trong working tree sau push, chưa commit/push.
 
 | Gói | Phần đã viết | Mức kiểm chứng và phần còn lại |
 |---|---|---|
-| G0 | Tách migration tạo trích xuất chứng từ sang V21, thêm V22–V33; seed demo chỉ chạy profile `demo`, cờ reset mặc định tắt. Môi trường mới có thể cấp tài khoản ADMIN đầu tiên bằng `BOOTSTRAP_ADMIN_EMAIL` và `BOOTSTRAP_ADMIN_PASSWORD`, ví bắt đầu từ 0. | PostgreSQL thử nghiệm mới lên V33; bản sao lịch sử V23 → V33. Tài khoản bootstrap và quỹ/ví cấu trúc đã kiểm tra trên database rỗng. Chưa migrate database chính. Cần cấu hình bootstrap ở môi trường triển khai thật. |
+| G0 | Tách migration tạo trích xuất chứng từ sang V21, thêm V22–V34; seed demo chỉ chạy profile `demo`, cờ reset mặc định tắt. Môi trường mới có thể cấp tài khoản ADMIN đầu tiên bằng `BOOTSTRAP_ADMIN_EMAIL` và `BOOTSTRAP_ADMIN_PASSWORD`; ADMIN được bật first-login setup để đặt PIN. | PostgreSQL thử nghiệm trước đây lên V33. V34 ghi lịch sử export chưa được migrate/runtime test trong lượt sửa mới. Chưa migrate database chính. Cần cấu hình bootstrap ở môi trường triển khai thật và kiểm tra setup PIN trên môi trường rỗng. |
 | G1 | Kiểm tra quyền/phạm vi request, hạn mức và tiền giữ theo yêu cầu; khóa request/ví/tạm ứng/payroll, chặn chi trùng; EXPENSE xác nhận chứng từ rồi mới ghi chi phí; cấm ghi đè kỳ lương đã chi; chuẩn hóa số dư ví, ngân sách và dư tạm ứng. | Luồng chi phí/đảo, tạm ứng/quyết toán/hoàn thật/khấu trừ và giải ngân song song đã chạy integration trên database thử nghiệm. Cần kiểm tra lại dữ liệu lịch sử thật theo từng ngoại lệ. |
-| G2 | Journal bổ sung chiều dự án/phòng ban/giai đoạn/danh mục và nguồn; ràng buộc DB cân bằng/bất biến; sổ theo tài khoản; kỳ đóng; đảo toàn phần có liên kết; sao kê ngân hàng thủ công và đối chiếu mốc thời gian. | Các DB constraint có 5 integration test. BOOKED đã được kiểm khi ghi bù nạp quỹ lịch sử; nạp quỹ mới hiện chỉ kiểm paymentRef, còn thiếu ràng buộc chứng cứ F05. Đóng kỳ/ngày đảo còn F06. MockBank cho rút ví cá nhân chưa phải ngân hàng thật. |
-| G3 | Ghi bù lịch sử có xem trước, chứng từ và mã nguồn tra cứu tại DB; mở sổ phần chênh lệch có PIN và căn cứ; khóa ghi bù tự động sau mở sổ; đối chiếu bộ đếm chi phí với journal/chứng từ và lưu audit trước/sau. | Hai luồng mở sổ và đối chiếu bộ đếm đã có integration test; cần chạy trên bản sao dữ liệu thực của doanh nghiệp và ký biên bản mở sổ. Không tự tạo bút toán cho nguồn thiếu chứng từ. |
+| G2 | Journal bổ sung chiều dự án/phòng ban/giai đoạn/danh mục và nguồn; ràng buộc DB cân bằng/bất biến; sổ theo tài khoản; kỳ đóng; đảo toàn phần có liên kết; sao kê ngân hàng thủ công và đối chiếu mốc thời gian. | Sau push, F05/F06 đã được sửa trong code: topup mới gắn dòng IN/BOOKED chưa dùng; có pre-close checks và quy tắc ngày đảo. Cần chạy lại migration V34 và integration trên DB cô lập. MockBank cho rút ví cá nhân chưa phải ngân hàng thật. |
+| G3 | Ghi bù lịch sử có xem trước, chứng từ và mã nguồn tra cứu tại DB; mở sổ phần chênh lệch có PIN và căn cứ; khóa ghi bù tự động sau mở sổ; đối chiếu bộ đếm chi phí với journal/chứng từ và lưu audit trước/sau. | PIN verify đã tách transaction để lưu lần sai độc lập với giao dịch tài chính. Cần chạy lại test sai PIN, khóa PIN, mở sổ và đối chiếu bộ đếm trên DB cô lập; chạy trên bản sao dữ liệu thực trước mở sổ. |
 | G4 | Trang giao dịch ví, journal, sổ tài khoản, chi tiết nguồn, kỳ, đối soát, chuyển đổi lịch sử, đối chiếu chi phí; route demo chuyển về trang thật; trạng thái tải/lỗi, link và nhãn tiền được chỉnh. | TypeScript và production build qua; API smoke trên database clone qua cho journal, account balances, advances, budget exposure, periods và spreadsheet catalog. Chưa nghiệm thu trực quan bằng trình duyệt cho đủ sáu role. |
-| X0–X6 | Nền `.xlsx` dùng chung: schema, preview/commit toàn lô, chống lặp, lỗi từng dòng, phân quyền server; có các bộ nhập chính và bộ xuất theo sáu role. Mẫu payroll dùng danh sách nhân viên thật, không gắn lương mẫu. | Integration đã thử import phòng ban, từ chối công thức, commit lặp và phân bổ lại nhiều hạn mức trong một file. Chưa đủ ma trận, tham chiếu nhập liệu, filter cùng màn hình và nhật ký export; xem F09–F10. Cần nghiệm thu từng dataset với file thật. |
+| X0–X6 | Nền `.xlsx` dùng chung: schema, preview/commit toàn lô, chống lặp, lỗi từng dòng, phân quyền server; thêm export log actor/scope/filter/số dòng/SHA-256, dataset dư tạm ứng từng nhân viên và tham chiếu phase/category cho request. | Các integration trước đây chỉ xác minh phần X0–X6 được nêu trong test. Export history cần V34; F09/F10 còn thiếu picker và ma trận báo cáo/role đầy đủ. Cần nghiệm thu dataset bằng file thật và kiểm tra tổng với màn hình cùng bộ lọc. |
 
-**Kết quả kiểm chứng hiện có:** backend package và production build Next.js đạt; Flyway V33 trên DB thử nghiệm mới và bản sao lịch sử; 12 integration test đạt (7 luồng tài chính/Excel + 5 bất biến journal), gồm mở sổ, đối chiếu bộ đếm, bootstrap ADMIN và phân bổ hạn mức trong cùng file. Không xem đây là nghiệm thu database chính hay giao diện sáu role.
+**Kết quả kiểm chứng:** trước đợt sửa tiếp theo, backend package/build, Next production build, migration V33 trên DB cô lập và 12 integration test đã được báo cáo. Trong đợt sửa sau push, Maven compile và Next production build đã qua; chưa chạy integration test, chưa migrate V34, chưa cập nhật database chính. Kết quả test cũ không xác minh các sửa mới F01–F11.
 
 **Kiểm tra giao diện:** frontend production build và API smoke trên backend nối PostgreSQL clone đã qua. Các API đã kiểm tra gồm danh sách journal, sổ tài khoản, tạm ứng còn mở theo nhân viên, mức sử dụng ngân sách, kỳ kế toán và danh mục Excel. Route `/accountant/ledger` chưa đăng nhập chuyển về `/login` như thiết kế. Không chạy được browser smoke trực quan vì phiên làm việc không cung cấp browser provider; cũng chưa nghiệm thu với đủ sáu role hoặc dữ liệu database triển khai chính.
 
