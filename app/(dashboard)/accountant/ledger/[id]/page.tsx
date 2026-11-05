@@ -114,16 +114,16 @@ function formatOwnerLabel(ownerType: WalletOwnerType | null, ownerId: number | n
 
 function getReferenceLink(txn: AccountantTransactionDetailResponse): { label: string; href?: string } | null {
   if (txn.referenceType === ReferenceType.REQUEST && txn.referenceId) {
-    return { label: `Xem yêu cầu #${txn.referenceId}`, href: `/requests/${txn.referenceId}` };
+    return { label: `Xem yêu cầu #${txn.referenceId}`, href: `/accountant/ledger/sources/requests/${txn.referenceId}` };
   }
   if (txn.referenceType === ReferenceType.PAYSLIP && txn.referenceId) {
-    return { label: `Xem phiếu lương #${txn.referenceId}`, href: `/payroll/${txn.referenceId}` };
+    return { label: `Xem phiếu lương #${txn.referenceId}`, href: `/accountant/payslips/${txn.referenceId}` };
   }
   if (txn.referenceType === ReferenceType.PROJECT && txn.referenceId) {
     return { label: `Xem dự án #${txn.referenceId}`, href: `/projects/${txn.referenceId}` };
   }
   if (txn.referenceType === ReferenceType.DEPARTMENT) {
-    return { label: "Phân bổ quỹ phòng ban", href: "/manager/department" };
+    return { label: "Báo cáo quỹ phòng ban", href: `/data-exchange?dataset=department-budgets&departmentId=${txn.referenceId || ""}` };
   }
   if (txn.referenceType === ReferenceType.SYSTEM) {
     return { label: "Giao dịch quỹ hệ thống" };
