@@ -30,11 +30,7 @@ function getStatusLabel(status: PayrollStatus): string {
 }
 
 function sumNet(entries: PayrollEntry[]): number {
-  return entries.reduce((sum, e) => sum + e.finalNetSalary, 0);
-}
-
-function recalcNet(entry: Pick<PayrollEntry, "baseSalary" | "bonus" | "allowance" | "deduction" | "advanceDeduct">): number {
-  return Math.max(0, entry.baseSalary + entry.bonus + entry.allowance - entry.deduction - entry.advanceDeduct);
+  return entries.filter(e=>e.status!==PayslipStatus.REVERSED).reduce((sum, e) => sum + e.finalNetSalary, 0);
 }
 
 function getStepDescription(step: 1 | 2 | 3 | 4): string {
@@ -108,7 +104,7 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
   const hasNetting = period?.nettingApplied === true;
   const isCompleted = period?.status === PayrollStatus.COMPLETED;
   const netTotal = useMemo(() => sumNet(period?.entries ?? []), [period?.entries]);
-  const totalEmployees = period?.entries.length ?? 0;
+  const totalEmployees = new Set((period?.entries ?? []).filter(e=>e.status!==PayslipStatus.REVERSED).map(e=>e.userId)).size;
 
   const canOpenStep = (step: 1 | 2 | 3 | 4): boolean => {
     if (step === 1) return true;
@@ -166,20 +162,11 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
         const entries = prev.entries.map((e) => (e.id === editingEntry.id ? res.data : e));
         return { ...prev, entries, nettingApplied: false, totalNetPayroll: sumNet(entries) };
       });
-    } catch {
-      // Optimistic update on error
-      setPeriod((prev) => {
-        if (!prev) return prev;
-        const entries = prev.entries.map((e) =>
-          e.id === editingEntry.id
-            ? { ...e, baseSalary: nextBase, bonus: nextBonus, allowance: nextAllowance, deduction: nextDeduction, advanceDeduct: nextAdvance, finalNetSalary: recalcNet({ baseSalary: nextBase, bonus: nextBonus, allowance: nextAllowance, deduction: nextDeduction, advanceDeduct: nextAdvance }) }
-            : e
-        );
-        return { ...prev, entries, nettingApplied: false, totalNetPayroll: sumNet(entries) };
-      });
+      setNettingResult(null);setRunResult(null);closeEdit();
+    } catch (err) {
+      setEntryError(err instanceof ApiError ? err.apiMessage : "Không lưu được dòng lương. Số liệu chưa được cập nhật.");
     } finally {
       setUploading(false);
-      closeEdit();
     }
   };
 
@@ -353,7 +340,7 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
                 {period.entries.map((entry) => (
                   <tr key={entry.id} className="border-b border-slate-100 last:border-b-0 hover:bg-blue-50/60 transition-colors">
                     <td className="px-4 py-3 text-sm text-slate-900 font-mono">{entry.employeeCode}</td>
-                    <td className="px-4 py-3 text-sm text-slate-900">{entry.fullName}</td>
+                    <td className="px-4 py-3 text-sm text-slate-900">{entry.fullName}{entry.status===PayslipStatus.REVERSED&&<p className="mt-1 text-xs text-rose-700">Đã đảo · chỉ lưu lịch sử</p>}</td>
                     <td className="px-4 py-3 text-right text-sm text-slate-900">{formatCurrency(entry.baseSalary)}</td>
                     <td className="px-4 py-3 text-right text-sm text-slate-900">{formatCurrency(entry.bonus + entry.allowance)}</td>
                     <td className="px-4 py-3 text-right text-sm text-rose-700">{formatCurrency(entry.deduction + entry.advanceDeduct)}</td>
@@ -369,7 +356,7 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
                         <button
                           type="button"
                           onClick={() => openEdit(entry)}
-                          disabled={isCompleted}
+                          disabled={isCompleted || entry.status!==PayslipStatus.DRAFT}
                           className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 text-xs"
                         >
                           Sửa tiền
@@ -549,7 +536,7 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
               </div>
             </div>
             {entryError && (
-              <div className="px-3 py-2 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-sm">
+              <div role="alert" className="px-3 py-2 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-sm">
                 {entryError}
               </div>
             )}

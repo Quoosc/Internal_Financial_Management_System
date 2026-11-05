@@ -18,6 +18,8 @@ function getTypeIcon(type: string): React.ReactNode {
     case NotificationType.REQUEST_SUBMITTED:
     case NotificationType.REQUEST_APPROVED_BY_TL:
     case NotificationType.REQUEST_PAID:
+    case NotificationType.EXPENSE_VERIFIED:
+    case NotificationType.EXPENSE_PAID:
     case NotificationType.PROJECT_TOPUP_APPROVED:
     case NotificationType.DEPT_TOPUP_APPROVED:
       return (
@@ -59,6 +61,8 @@ function getTypeIconClass(type: string): string {
     case NotificationType.REQUEST_SUBMITTED:
     case NotificationType.REQUEST_APPROVED_BY_TL:
     case NotificationType.REQUEST_PAID:
+    case NotificationType.EXPENSE_VERIFIED:
+    case NotificationType.EXPENSE_PAID:
     case NotificationType.PROJECT_TOPUP_APPROVED:
     case NotificationType.DEPT_TOPUP_APPROVED:
       return "border-emerald-100 bg-emerald-50 text-emerald-700";

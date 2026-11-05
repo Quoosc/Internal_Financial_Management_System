@@ -8,8 +8,9 @@
 /**
  * khớp với notification.entity.NotificationType
  *
- * Cập nhật hoàn toàn — 11 loại notification theo 3-flow architecture:
+ * Cập nhật theo NotificationType của backend:
  *   Flow 1: REQUEST_SUBMITTED → REQUEST_APPROVED_BY_TL → REQUEST_PAID / REQUEST_REJECTED
+ *   Nhân viên tự chi: EXPENSE_VERIFIED → EXPENSE_PAID
  *   Flow 2: PROJECT_TOPUP_APPROVED / PROJECT_TOPUP_REJECTED
  *   Flow 3: DEPT_TOPUP_APPROVED / DEPT_TOPUP_REJECTED
  *   Payroll: SALARY_PAID
@@ -21,6 +22,8 @@ export enum NotificationType {
   REQUEST_APPROVED_BY_TL = "REQUEST_APPROVED_BY_TL",
   REQUEST_REJECTED = "REQUEST_REJECTED",
   REQUEST_PAID = "REQUEST_PAID",
+  EXPENSE_VERIFIED = "EXPENSE_VERIFIED",
+  EXPENSE_PAID = "EXPENSE_PAID",
 
   // Flow 2: Project Fund Top-up
   PROJECT_TOPUP_APPROVED = "PROJECT_TOPUP_APPROVED",

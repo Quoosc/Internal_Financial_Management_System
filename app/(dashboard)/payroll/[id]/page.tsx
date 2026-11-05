@@ -12,10 +12,12 @@ interface PageProps {
 }
 
 function statusLabel(status: PayslipStatus): string {
+  if(status===PayslipStatus.REVERSED)return "Đã đảo";
   return status === PayslipStatus.PAID ? "Đã thanh toán" : "Chờ thanh toán";
 }
 
 function statusClass(status: PayslipStatus): string {
+  if(status===PayslipStatus.REVERSED)return "border-rose-200 bg-rose-50 text-rose-700";
   return status === PayslipStatus.PAID
     ? "bg-emerald-50 border-emerald-200 text-emerald-700"
     : "bg-amber-50 border-amber-200 text-amber-700";
@@ -122,6 +124,8 @@ export default function PayslipDetailPage({ params }: PageProps) {
           </div>
         </div>
       </section>
+      {payslip.status===PayslipStatus.REVERSED&&<p role="status" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">Phiếu lương đã đảo. Các số tiền bên dưới là số gốc để truy vết, không được cộng vào tổng thực lĩnh còn hiệu lực.</p>}
+
 
         <div className="print:hidden">
           <button

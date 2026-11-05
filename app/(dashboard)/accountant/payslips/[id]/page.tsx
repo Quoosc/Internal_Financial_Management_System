@@ -12,10 +12,12 @@ interface PageProps {
 }
 
 function getStatusLabel(status: PayslipStatus): string {
+  if(status===PayslipStatus.REVERSED)return "Đã đảo";
   return status === PayslipStatus.PAID ? "Đã chi trả" : "Nháp";
 }
 
 function getStatusClass(status: PayslipStatus): string {
+  if(status===PayslipStatus.REVERSED)return "border-rose-200 bg-rose-50 text-rose-700";
   return status === PayslipStatus.PAID
     ? "border-emerald-200 bg-emerald-50 text-emerald-700"
     : "border-slate-200 bg-slate-50 text-slate-600";
@@ -122,6 +124,8 @@ export default function AccountantPayslipDetailPage({ params }: PageProps) {
           </span>
         </div>
       </section>
+      {payslip.status===PayslipStatus.REVERSED&&<p role="status" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">Phiếu lương đã đảo. Các số tiền bên dưới là số gốc để truy vết, không được cộng vào tổng thực lĩnh còn hiệu lực.</p>}
+
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <MetricCard label="Tổng thu nhập" value={formatCurrency(totalEarnings)} helper="Lương, thưởng và phụ cấp" tone="blue" />
