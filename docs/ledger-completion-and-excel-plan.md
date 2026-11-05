@@ -1,5 +1,17 @@
 # IFMS — rà soát sổ cái và kế hoạch hoàn thiện nghiệp vụ, giao diện, Excel
 
+> **Kiểm tra 05/11/2026:** bản sao DB thực tế từ V18 đã migrate tới V36 và được
+> dùng để chạy các luồng sổ cái, sao kê, quỹ, tạm ứng, hoàn chi, payroll và Excel.
+> Phát hiện/sửa F25–F30; xem [review mới nhất](ledger-implementation-review.md).
+> Đây là kiểm chứng một bản sao, chưa thay thế việc rà soát Flyway từng môi trường
+> hoặc UAT toàn bộ điều kiện của G3.1, G4.2 và V1. Mốc 19/23 bên dưới là kết quả
+> đánh giá ngày 23/10, không phải tỷ lệ nghiệm thu mới sau kiểm tra này.
+> Sau khi kiểm chứng bản sao, DB Docker local đã được sao lưu và migrate V18→V36;
+> số dư ví và số lượng request/transaction/payslip không đổi. Các môi trường khác
+> vẫn cần tự kiểm lịch sử Flyway trước khi nâng cấp.
+> DB gốc chưa có bút toán/sao kê kế toán; 24 giao dịch ví cũ cần đối chiếu chứng
+> từ rồi ghi bù/mở sổ theo quy trình đã chốt, không backfill tự động.
+
 > **Sau sửa F20–F24 ngày 23/10:** cả năm phát hiện đã sửa và kiểm chứng.
 > G4.1 trở về D; 19/23 gói D (83% theo số gói), còn G0.1/G3.1/G4.2/V1.
 > 20/20 test backend, 12/12 browser và production build qua. Xem

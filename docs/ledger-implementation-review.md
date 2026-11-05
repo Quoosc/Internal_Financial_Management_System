@@ -1,5 +1,46 @@
 # IFMS — review triển khai sổ cái và Excel
 
+## Kiểm tra luồng thực tế — 05/11/2026
+
+Kiểm tra trên **bản sao PostgreSQL 16 của database IFMS đang dùng** (nguồn ở V18),
+cùng Redis/RabbitMQ tạm. Frontend chạy production build và gọi API backend thật;
+dữ liệu nghiệp vụ kiểm thử chỉ được tạo trong bản sao. Các ca Playwright live
+không chặn hay giả lập phản hồi mạng. Sau khi kiểm chứng bản sao, đã sao lưu DB
+Docker local lần nữa và áp dụng Flyway V19–V36 cho DB gốc. Tổng số dư ví
+`101.376.600.000`, 24 request, 24 transaction và 17 payslip giữ nguyên trước/sau
+nâng cấp. Bản sao lưu trước nâng cấp nằm trong thư mục kiểm thử bị Git bỏ qua.
+DB gốc hiện có **0 bút toán kế toán, 0 dòng sao kê đã nhập**. Sổ giao dịch ví vẫn
+có 24 giao dịch cũ; sổ kế toán chỉ hiện bút toán mới hoặc nguồn lịch sử đã được
+đối chiếu, ghi bù/mở sổ có chứng từ. Không tự suy diễn bút toán từ giao dịch ví
+hay tạo sao kê giả để lấp màn hình.
+
+| Mã | Lỗi tái hiện | Cách sửa và kết quả |
+|---|---|---|
+| F25 | Ràng buộc enum từ bản DB cũ từ chối `VERIFY`, `ACCOUNTANT_VERIFIED`, `REVERSED`; xác nhận chứng từ EXPENSE trả 409 dù request hợp lệ. | Migration V35 cập nhật bốn CHECK của request, lịch sử và phiếu lương theo enum hiện hành. Sau nâng cấp trên bản sao: xác nhận, thanh toán và đảo hoàn chi đều thành công; vẫn từ chối giá trị không hợp lệ. |
+| F26 | 17/18 link nguồn từ chi tiết giao dịch ví của Accountant dẫn sang trang tự xem request hoặc phiếu lương; một số nguồn phòng ban trỏ vào trang Manager. | Request mở trang nguồn kế toán theo ID, phiếu lương mở trang Accountant, phòng ban mở báo cáo Excel có phạm vi. Trang nguồn hiển thị số duyệt và có thử lại khi lỗi. |
+| F27 | Sửa dòng lương bị API từ chối nhưng UI vẫn tự cập nhật số và đóng hộp thoại; phiếu đã đảo bị cộng vào tổng. | Chỉ cập nhật sau phản hồi thành công; lỗi giữ biểu mẫu và số gốc. Tổng lương/số nhân viên loại phiếu `REVERSED`; phiếu đảo được ghi nhãn và giải thích là lịch sử. Thay thế phiếu thật: tổng hiệu lực 1.500, không cộng phiếu cũ 1.000. |
+| F28 | Luồng SSE khi đóng trang gây lỗi xác thực trên response đã gửi. | Cho phép dispatch ASYNC/ERROR, giữ xác thực request ban đầu; filter JWT không bắt lỗi downstream thành lỗi token. Unit test kiểm cả lỗi stream và JWT không hợp lệ. |
+| F29 | Đổi phạm vi mở sổ hoặc nguồn ghi bù vẫn giữ xác nhận/PIN/preview cũ. | Xóa thông tin xác nhận khi đổi nguồn, bỏ phản hồi preview cũ và kiểm lại phạm vi trước khi ghi. |
+| F30 | Sau khi xác nhận/thanh toán EXPENSE, RabbitMQ từ chối `EXPENSE_VERIFIED` và `EXPENSE_PAID`; thông báo không được lưu. | Bổ sung hai loại thông báo, link tới request và migration V36 cập nhật CHECK `notifications_type_check` đúng danh sách enum. Chạy lại luồng thật: mỗi loại được lưu một thông báo, cùng dẫn về request; browser nhận hai thông báo. |
+
+**Các luồng đã kiểm trên bản sao:** nạp quỹ từ sao kê BOOKED và đảo toàn phần;
+tạm ứng → quyết toán chứng từ → nhân viên hoàn tiền; nhân viên tự chi → kế toán
+xác nhận → thanh toán → đảo; cấp quỹ phòng ban/dự án (gồm chặn vượt hạn mức);
+nhập sao kê PENDING rồi BOOKED và khớp giao dịch; đối soát ngân hàng/phạm vi tiền
+doanh nghiệp; đóng kỳ tháng trước; ghi bù lịch sử và mở sổ có chứng từ, chống ghi
+trùng; import bảng lương Excel, chi lương rồi thay phiếu; truy cập 6 role và 80
+lượt xuất XLSX. Bản kiểm tra live có 6/6 ca browser qua và một ca riêng cho
+thông báo (1/1); bộ UI cô lập có 15/15 ca qua. Backend có 24/24 ca đạt theo
+bốn báo cáo Surefire (15 nghiệp vụ, 5 ràng buộc journal, 1 migration DB cũ,
+3 JWT). Frontend production build qua. Log sau V36 không còn lỗi loại thông
+báo không nhận diện hay lỗi SSE response đã gửi.
+
+**Giới hạn:** việc tạo chứng từ ngoài ngân hàng thật và UAT đầy đủ trên database
+triển khai vẫn chưa thực hiện. G0.1 có bằng chứng migrate trên một bản sao V18,
+nhưng cần kiểm tra lịch sử/checksum ở từng môi trường. G3.1, G4.2 và V1 còn việc
+theo tiêu chí plan; không dùng số ca trên làm kết luận hoàn thành 100%.
+
+
 ## Kết quả sửa F20–F24 — 23/10/2026
 
 **Đã sửa 5/5 phát hiện của lần review gần nhất và kiểm chứng lại.** G4.1 trở

@@ -1,5 +1,14 @@
 # API_CONTRACT.md - Frontend/Backend Contract
 
+> **Bổ sung 05/11/2026:** payload HTTP của sổ cái không đổi. Backend cần áp dụng
+> migration V35/V36 trên DB cũ trước khi chạy luồng EXPENSE: V35 cho phép trạng
+> thái/action xác nhận và đảo; V36 cho phép lưu thông báo `EXPENSE_VERIFIED` và
+> `EXPENSE_PAID`. `referenceLink` của hai thông báo về `/requests/{id}`.
+> Từ chi tiết giao dịch ví Accountant, link nguồn REQUEST dùng
+> `/accountant/ledger/sources/requests/{id}`, PAYSLIP dùng
+> `/accountant/payslips/{id}`. Phiếu lương `REVERSED` là lịch sử, không tính vào
+> tổng lương hiệu lực. Xem [kiểm tra thực tế](ledger-implementation-review.md).
+
 > **Phụ lục sổ cái 23/10/2026:** các contract kế toán/Excel bên dưới cập nhật
 > các mục lịch sử của file này. Xem [báo cáo triển khai](bao-cao-chi-tiet-tuan-vua-roi.md)
 > về mức kiểm chứng.

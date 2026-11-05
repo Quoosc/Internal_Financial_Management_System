@@ -1,5 +1,16 @@
 # Báo cáo chi tiết công việc tuần vừa qua — Sổ cái IFMS
 
+> **Phụ lục kiểm tra 05/11/2026:** báo cáo tuần 16–22/10 bên dưới giữ nguyên mốc
+> lịch sử. Lượt demo tiếp theo trên bản sao DB thực tế phát hiện và sửa F25–F30:
+> CHECK enum cũ chặn xác nhận/đảo EXPENSE, thông báo hoàn chi bị RabbitMQ từ chối,
+> link nguồn giao dịch ví sai phạm vi, UI lương hiển thị số chưa lưu và cộng phiếu
+> đã đảo, cùng state mở sổ/SSE. Đã kiểm 6 ca browser API thật, 15 ca UI cô lập và
+> 80 lượt xuất Excel sáu role. Kết quả backend và giới hạn nghiệm thu ở
+> [review triển khai](ledger-implementation-review.md). Mốc phần trăm tuần cũ
+> không được hiểu là nghiệm thu toàn bộ sau lần kiểm tra này.
+> DB Docker local đã được sao lưu và nâng V18→V36 sau khi kiểm chứng bản sao;
+> tổng số dư ví và số lượng request/transaction/payslip không đổi.
+
 > **Cập nhật sau sửa 23/10:** F20–F24 đã sửa và kiểm chứng, gồm xác nhận/PIN
 > theo từng dự án, phân biệt lỗi tải/404, retry ngân hàng, nhãn cân bằng theo
 > phạm vi và ứng viên ngân hàng phân trang/tìm kiếm. G4.1 trở về D;

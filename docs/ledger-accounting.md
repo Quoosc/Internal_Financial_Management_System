@@ -1,5 +1,15 @@
 # Sổ cái kế toán IFMS — tài liệu frontend
 
+> **Kiểm tra 05/11/2026:** trên bản sao DB đang dùng từ V18, việc xác nhận
+> chứng từ hoàn chi cần migration V35 để ràng buộc trạng thái/action chấp nhận
+> `VERIFY` và `ACCOUNTANT_VERIFIED`. Thông báo xác nhận/thanh toán hoàn chi cần
+> V36 và hai loại `EXPENSE_VERIFIED`, `EXPENSE_PAID` ở frontend/backend.
+> Giao dịch ví của Accountant dẫn tới trang nguồn request kế toán và phiếu lương
+> Accountant; phiếu lương đã đảo chỉ còn trong lịch sử, không cộng vào tổng hiệu
+> lực. Các thao tác và giới hạn kiểm chứng xem [review](ledger-implementation-review.md).
+> DB Docker local đã được sao lưu và nâng từ V18 lên V36; các môi trường khác cần
+> áp dụng migration theo Flyway và kiểm chứng riêng.
+
 > **Sau sửa 23/10 — F20–F24:** xác nhận/PIN đối chiếu theo dự án được xóa khi
 > đổi phạm vi; chi tiết tách lỗi tải/404; đối soát ngân hàng có retry và chặn
 > kết luận khi API lỗi; nhãn cân bằng theo phạm vi; bộ chọn ngân hàng phân trang,
