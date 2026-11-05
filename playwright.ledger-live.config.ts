@@ -1,0 +1,2 @@
+import { defineConfig } from "@playwright/test";
+export default defineConfig({testDir:"./tests/ledger-live",workers:1,timeout:60000,use:{baseURL:"http://127.0.0.1:3100",headless:true},reporter:[["list"],["json",{outputFile:"test-results/ledger-live/results.json"}]],outputDir:"test-results/ledger-live/artifacts",webServer:{command:"npm run start -- -p 3100",url:"http://127.0.0.1:3100/login",reuseExistingServer:false,timeout:90000}});
