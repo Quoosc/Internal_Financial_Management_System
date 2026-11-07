@@ -58,6 +58,8 @@ export interface DisbursementDetailResponse {
   status: RequestStatus;
   amount: number;
   approvedAmount: number;
+  categoryId: number | null;
+  categoryName: string | null;
   description: string | null;
   rejectReason: string | null;
   requester: DisbursementRequester;

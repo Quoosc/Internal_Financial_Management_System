@@ -19,6 +19,28 @@ import {
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { isAccountantQueueStatus } from "@/lib/adapters/request-status";
 
+interface DisbursementBudgetScope {
+  budgetLimit: number;
+  recognizedExpense: number;
+  reservedForOtherRequests: number;
+  openAdvance: number;
+  availableNow: number;
+  availableAfterThisRequest: number;
+}
+
+interface DisbursementBudgetContext {
+  projectCode: string;
+  projectName: string;
+  phaseCode: string;
+  phaseName: string;
+  categoryName: string | null;
+  approvedAmount: number;
+  calculatedAt: string;
+  project: DisbursementBudgetScope;
+  phase: DisbursementBudgetScope;
+  category: DisbursementBudgetScope | null;
+}
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -42,19 +64,6 @@ function getTypeLabel(type: RequestType): string {
       return "Quyết toán tạm ứng";
     default:
       return type;
-  }
-}
-
-function getTypeClass(type: RequestType): string {
-  switch (type) {
-    case RequestType.ADVANCE:
-      return "bg-violet-50 border-violet-200 text-violet-700";
-    case RequestType.EXPENSE:
-      return "bg-sky-100 border-sky-200 text-sky-700";
-    case RequestType.REIMBURSE:
-      return "bg-amber-50 border-amber-200 text-amber-700";
-    default:
-      return "bg-slate-500/15 border-slate-500/30 text-slate-600";
   }
 }
 
@@ -138,13 +147,10 @@ export default function AccountantDisbursementDetailPage({
   const [detail, setDetail] = useState<DisbursementDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [checklist, setChecklist] = useState({
-    identityVerified: false,
-    amountVerified: false,
-    attachmentsReviewed: false,
-    budgetAvailable: false,
-    approvalChainComplete: false,
-  });
+  const [budgetContext, setBudgetContext] = useState<DisbursementBudgetContext | null>(null);
+  const [budgetContextOpen, setBudgetContextOpen] = useState(false);
+  const [budgetContextLoading, setBudgetContextLoading] = useState(false);
+  const [budgetContextError, setBudgetContextError] = useState<string | null>(null);
 
   const [documentDrafts, setDocumentDrafts] = useState<DocumentVerificationDraft[]>([]);
   useEffect(() => {
@@ -211,13 +217,6 @@ export default function AccountantDisbursementDetailPage({
   const isVerifyingExpense = Boolean(
     detail?.type === RequestType.EXPENSE && detail.status === RequestStatus.APPROVED_BY_TEAM_LEADER,
   );
-  const allChecked = useMemo(
-    () => Object.entries(checklist).every(([key, checked]) =>
-      (isVerifiedExpenseWaitingForPayment && key === "budgetAvailable") ||
-      (detail?.type === RequestType.ADVANCE && key === "attachmentsReviewed") || checked),
-    [checklist, detail?.type, isVerifiedExpenseWaitingForPayment],
-  );
-
   const tlApprovalEntry = useMemo(() => {
     if (!detail) return null;
 
@@ -255,22 +254,34 @@ export default function AccountantDisbursementDetailPage({
         ? detail?.type === RequestType.REIMBURSE ? "Đã quyết toán chứng từ" : "Đã hoàn tất"
         : detail?.status === RequestStatus.REJECTED ? "Đã từ chối" : "Đã xử lý";
 
-  const budgetStillAvailable = useMemo(() => {
-    if (isVerifiedExpenseWaitingForPayment) return true;
-    if (!detail) return false;
-
-    const budgetLimit = detail.phase.budgetLimit ?? 0;
-    const currentSpent = detail.phase.currentSpent ?? 0;
-    const remaining = budgetLimit - currentSpent;
-    return remaining >= detail.approvedAmount;
-  }, [detail, isVerifiedExpenseWaitingForPayment]);
-
-  const handleChecklistChange = (key: keyof typeof checklist) => {
-    setChecklist((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+  const loadBudgetContext = async () => {
+    if (!detail) return;
+    setBudgetContextOpen(true);
+    setBudgetContextLoading(true);
+    setBudgetContextError(null);
+    setBudgetContext(null);
+    try {
+      const response = await api.get<DisbursementBudgetContext>(
+        `/api/v1/accountant/disbursements/${id}/budget-context`,
+      );
+      setBudgetContext(response.data);
+    } catch (error) {
+      const message = error instanceof ApiError ? error.apiMessage : "Không tải được số liệu ngân sách mới nhất.";
+      setBudgetContextError(message);
+      setBudgetContext(null);
+    } finally {
+      setBudgetContextLoading(false);
+    }
   };
+
+  useEffect(() => {
+    if (!budgetContextOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setBudgetContextOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [budgetContextOpen]);
 
   const handlePinChange = (value: string) => {
     const digitsOnly = value.replace(/\D/g, "").slice(0, 5);
@@ -284,11 +295,6 @@ export default function AccountantDisbursementDetailPage({
       setPinError("Yêu cầu không còn ở trạng thái chờ giải ngân.");
       return;
     }
-    if (!allChecked) {
-      setPinError("Vui lòng hoàn tất checklist trước khi giải ngân.");
-      return;
-    }
-
     if (detail && !isVerifiedExpenseWaitingForPayment && (detail.type === "EXPENSE" || detail.type === "REIMBURSE")
         && !validDocumentAllocation(documentDrafts, detail.approvedAmount ?? detail.amount)) {
       setPinError("Cần nhập đủ thông tin chứng từ và phân bổ đúng tổng tiền được duyệt."); return;
@@ -428,68 +434,28 @@ export default function AccountantDisbursementDetailPage({
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-blue-200 bg-linear-to-br from-blue-700 via-blue-600 to-cyan-600 text-white shadow-xl shadow-blue-900/15">
-        <div className="relative p-6 sm:p-8">
-          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute bottom-0 right-10 h-24 w-24 rounded-full bg-cyan-300/20 blur-2xl" />
-          <div className="relative max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">Trung tâm giải ngân</p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Chi tiết giải ngân</h1>
-            <p className="mt-3 text-sm leading-6 text-blue-100">Kiểm tra người nhận, chứng từ, luồng phê duyệt và xác nhận chuyển tiền.</p>
+      <section className="overflow-hidden rounded-3xl border border-blue-200 bg-linear-to-br from-blue-700 via-blue-600 to-indigo-700 text-white shadow-xl shadow-blue-900/10">
+        <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100">Hồ sơ giải ngân · {getTypeLabel(detail.type)}</p>
+            <h1 className="mt-2 break-all font-mono text-2xl font-bold tracking-tight sm:text-3xl">{detail.requestCode}</h1>
+            <p className="mt-2 text-sm text-blue-100">Yêu cầu tạo lúc {formatDateTime(detail.createdAt)} · Người nhận: {detail.requester.fullName}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-sm font-semibold">{processingStatusLabel}</span>
+            <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-2.5">
+              <p className="text-xs text-blue-100">{isVerifyingExpense || isVerifiedExpenseWaitingForPayment ? "Số tiền hoàn chi" : "Số tiền đã duyệt"}</p>
+              <p className="mt-1 text-lg font-bold">{formatCurrency(detail.approvedAmount)}</p>
+            </div>
           </div>
         </div>
       </section>
 
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Link
-          href="/accountant/disbursements"
-          className="hover:text-slate-700 transition-colors"
-        >
-          Giải ngân
-        </Link>
-        <span>/</span>
-        <span className="text-slate-600 font-mono">{detail.requestCode}</span>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-        <InfoCard label="Mã yêu cầu" value={detail.requestCode} mono />
-        <InfoCard label="Người nhận" value={detail.requester.fullName} />
-        <InfoCard label={isVerifyingExpense || isVerifiedExpenseWaitingForPayment ? "Số tiền hoàn chi" : "Số tiền tạm ứng"} value={formatCurrency(detail.approvedAmount)} tone="text-amber-700" />
-        <InfoCard label="Trạng thái xử lý" value={processingStatusLabel} />
-      </div>
-
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-6">
         <div className="space-y-6">
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 space-y-4">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-              <div>
-                <p className="text-xs text-slate-500">Mã yêu cầu</p>
-                <h1 className="text-2xl font-bold text-slate-900 font-mono mt-1">
-                  {detail.requestCode}
-                </h1>
-                <p className="text-sm text-slate-500 mt-1">
-                  Tạo lúc {formatDateTime(detail.createdAt)}
-                </p>
-              </div>
-              <div className="flex flex-col items-start lg:items-end gap-2">
-                <span
-                  className={`inline-flex px-3 py-1.5 rounded-full border text-sm ${getTypeClass(detail.type)}`}
-                >
-                  {getTypeLabel(detail.type)}
-                </span>
-                <p className="text-2xl font-bold text-amber-700">
-                  {formatCurrency(detail.approvedAmount)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 space-y-4">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Luồng phê duyệt
-            </h2>
-
-            <div className="space-y-3">
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <SectionHeading number="1" title="Luồng phê duyệt" description="Ai đã xử lý yêu cầu và yêu cầu đang ở bước nào." />
+            <div className="space-y-3 p-5">
               <TimelineStep
                 title="Bước 1: Nhân viên tạo yêu cầu"
                 subtitle={detail.requester.fullName}
@@ -517,13 +483,11 @@ export default function AccountantDisbursementDetailPage({
                 current={canProcessDisbursement}
               />
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 space-y-4">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Thông tin người nhận
-            </h2>
-
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <SectionHeading number="2" title="Thông tin người nhận" description="Đối chiếu người thụ hưởng và tài khoản nhận tiền." />
+            <div className="space-y-4 p-5">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-full border border-slate-200 bg-white text-slate-900 flex items-center justify-center text-sm font-semibold">
                 {getInitials(detail.requester.fullName)}
@@ -555,13 +519,12 @@ export default function AccountantDisbursementDetailPage({
                 value={detail.requester.jobTitle ?? "—"}
               />
             </div>
-          </div>
+            </div>
+          </section>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 space-y-4">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Thông tin yêu cầu
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <SectionHeading number="3" title="Thông tin yêu cầu" description="Dự án, giai đoạn, khoản tiền và mục đích đã được duyệt." />
+            <div className="grid grid-cols-1 gap-3 p-5 md:grid-cols-2">
               <InfoCard
                 label="Dự án"
                 value={`${detail.project.projectCode} • ${detail.project.name}`}
@@ -571,73 +534,33 @@ export default function AccountantDisbursementDetailPage({
                 value={`${detail.phase.phaseCode} • ${detail.phase.name}`}
               />
               <InfoCard
-                label="Ngân sách phase"
-                value={`${formatCurrency(detail.phase.currentSpent ?? 0)} / ${formatCurrency(detail.phase.budgetLimit ?? 0)}`}
-              />
-              <InfoCard
-                label="Số tiền giải ngân"
+                label={isVerifyingExpense || isVerifiedExpenseWaitingForPayment ? "Số tiền hoàn chi đã duyệt" : "Số tiền đã duyệt"}
                 value={formatCurrency(detail.approvedAmount)}
-                tone="text-amber-700"
+                tone="text-blue-700"
               />
+              <div className="flex flex-col justify-center rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                <p className="text-xs font-medium text-blue-800">Ngân sách giai đoạn</p>
+                <p className="mt-1 text-sm text-slate-700">Chi phí đã ghi nhận: {formatCurrency(detail.phase.currentSpent ?? 0)} / hạn mức {formatCurrency(detail.phase.budgetLimit ?? 0)}</p>
+                <button type="button" onClick={() => void loadBudgetContext()} className="mt-3 inline-flex w-fit items-center gap-2 rounded-xl bg-blue-700 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-blue-800">
+                  Xem chi tiết ngân sách
+                  <span aria-hidden="true">↗</span>
+                </button>
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-xs text-slate-500">Mô tả</p>
-              <p className="text-sm text-slate-700 mt-1 whitespace-pre-line">
-                {detail.description ?? "Không có mô tả"}
-              </p>
+            <div className="mx-5 mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-medium text-slate-500">Nội dung đề nghị</p>
+              <p className="mt-1 whitespace-pre-line text-sm leading-6 text-slate-800">{detail.description ?? "Không có mô tả"}</p>
             </div>
-          </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 space-y-4">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Checklist kiểm tra
-            </h2>
-
-            <ChecklistItem
-              checked={checklist.identityVerified}
-              onToggle={() => handleChecklistChange("identityVerified")}
-              label="Đã xác nhận danh tính người nhận"
-            />
-
-            <ChecklistItem
-              checked={checklist.amountVerified}
-              onToggle={() => handleChecklistChange("amountVerified")}
-              label={`${detail.type === RequestType.ADVANCE ? "Số tiền khớp đề nghị đã duyệt" : "Số tiền khớp chứng từ"} (${formatCurrency(detail.approvedAmount)})`}
-            />
-
-            <ChecklistItem
-              checked={checklist.attachmentsReviewed}
-              onToggle={() => handleChecklistChange("attachmentsReviewed")}
-              label={detail.type === RequestType.ADVANCE ? "Đã xem căn cứ dự toán / tài liệu hỗ trợ (nếu có)" : "Đã xem xét tất cả hóa đơn, chứng từ đính kèm"}
-              hint={detail.type === RequestType.ADVANCE ? "Tài liệu hỗ trợ không phải hóa đơn; chứng từ thực tế nộp khi quyết toán sau chi." : undefined}
-            />
-
-            <ChecklistItem
-              checked={checklist.budgetAvailable}
-              onToggle={() => handleChecklistChange("budgetAvailable")}
-              label={isVerifyingExpense ? "Ngân sách dự án còn đủ cho khoản chi" : "Ngân sách dự án còn đủ cho khoản này"}
-              hint={
-                budgetStillAvailable
-                  ? "Ngân sách khả dụng"
-                  : "Ngân sách đang sát ngưỡng"
-              }
-            />
-
-            <ChecklistItem
-              checked={checklist.approvalChainComplete}
-              onToggle={() => handleChecklistChange("approvalChainComplete")}
-              label="Chuỗi phê duyệt đầy đủ và hợp lệ"
-            />
-          </div>
+          </section>
         </div>
 
         <div className="flex flex-col gap-6 xl:sticky xl:top-6 xl:self-start">
           {!isVerifiedExpenseWaitingForPayment && (detail.type === "EXPENSE" || detail.type === "REIMBURSE") && <FinancialDocumentEditor documents={documentDrafts} amount={detail.approvedAmount ?? detail.amount} onChange={setDocumentDrafts} />}
-          <div className="order-2 rounded-3xl border border-slate-200 bg-white p-5 space-y-4">
-            <h2 className="text-lg font-semibold text-slate-900">
-              {detail.type === RequestType.ADVANCE ? "Căn cứ dự toán đính kèm" : "Hóa đơn / chứng từ đính kèm"}
-            </h2>
+          <section className="order-2 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <SectionHeading number="4" title={detail.type === RequestType.ADVANCE ? "Căn cứ dự toán đính kèm" : "Hóa đơn / chứng từ đính kèm"} description="Tài liệu dùng để đối chiếu trước khi xác nhận." />
+            <div className="space-y-4 p-5">
 
             <p className="text-xs leading-5 text-slate-500">
               {detail.type === RequestType.ADVANCE
@@ -696,17 +619,17 @@ export default function AccountantDisbursementDetailPage({
               </div>
             )}
           </div>
+          </section>
 
-          <div className="order-1 rounded-3xl border border-slate-200 bg-white p-5 space-y-4">
-            <h2 className="text-lg font-semibold text-slate-900">
-              {!canProcessDisbursement ? processingStatusLabel : isVerifyingExpense ? "Xác nhận chứng từ hoàn chi" : isVerifiedExpenseWaitingForPayment ? "Thanh toán hoàn chi" : "Xác nhận giải ngân tạm ứng"}
-            </h2>
+          <section className="order-1 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <SectionHeading number="5" title={!canProcessDisbursement ? processingStatusLabel : isVerifyingExpense ? "Xác nhận chứng từ hoàn chi" : isVerifiedExpenseWaitingForPayment ? "Thanh toán hoàn chi" : "Xác nhận giải ngân tạm ứng"} description="Nhập PIN sau khi đối chiếu thông tin và chứng từ liên quan." />
+            <div className="space-y-4 p-5">
             <p className="text-sm text-slate-500">
               {!canProcessDisbursement ? "Yêu cầu này đã kết thúc; không cần thao tác thêm." : isVerifyingExpense ? "Nhập mã PIN để xác nhận chứng từ hợp lệ và ghi nhận chi phí." : isVerifiedExpenseWaitingForPayment ? "Nhập mã PIN để chuyển khoản hoàn chi đã được xác nhận." : "Nhập mã PIN để xác nhận giải ngân tạm ứng."}
             </p>
 
             <div
-              className={`rounded-2xl border p-4 ${allChecked ? "border-emerald-200 bg-emerald-500/5" : "border-slate-200 bg-white"}`}
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
             >
               <label className="block text-sm text-slate-600 mb-2">
                 Mã PIN (5 chữ số)
@@ -717,7 +640,7 @@ export default function AccountantDisbursementDetailPage({
                 maxLength={5}
                 value={pin}
                 onChange={(event) => handlePinChange(event.target.value)}
-                disabled={!canProcessDisbursement || !allChecked || submitting}
+                disabled={!canProcessDisbursement || submitting}
                 placeholder="•••••"
                 className="w-full px-4 py-3 rounded-2xl bg-blue-50 border border-slate-200 text-slate-900 tracking-[0.35em] text-center text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:opacity-50"
               />
@@ -729,11 +652,6 @@ export default function AccountantDisbursementDetailPage({
                 placeholder={isVerifyingExpense ? "Ghi chú xác nhận chứng từ (không bắt buộc)" : "Ghi chú thanh toán (không bắt buộc)"}
                 className="mt-3 w-full px-4 py-2.5 rounded-2xl border border-slate-200 bg-white text-slate-900 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:opacity-50"
               />
-              {!allChecked && (
-                <p className="text-xs text-amber-700 mt-2">
-                  Cần hoàn tất checklist trước khi nhập PIN.
-                </p>
-              )}
               {pinError && (
                 <p className="text-xs text-rose-700 mt-2">{pinError}</p>
               )}
@@ -742,7 +660,7 @@ export default function AccountantDisbursementDetailPage({
             <button
               type="button"
               onClick={handleDisburse}
-              disabled={!canProcessDisbursement || pin.length < 5 || submitting || !allChecked}
+              disabled={!canProcessDisbursement || pin.length < 5 || submitting}
               className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
             >
               {submitting && canProcessDisbursement && <svg className="animate-spin h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
@@ -768,9 +686,66 @@ export default function AccountantDisbursementDetailPage({
                 Từ chối giải ngân
               </button>
             )}
-          </div>
+            </div>
+          </section>
         </div>
       </div>
+
+      {budgetContextOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6">
+          <button type="button" className="absolute inset-0 bg-slate-950/65" aria-label="Đóng thông tin ngân sách" onClick={() => setBudgetContextOpen(false)} />
+          <section role="dialog" aria-modal="true" aria-labelledby="budget-dialog-title" className="relative max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-3xl border border-slate-200 bg-slate-50 shadow-2xl">
+            <div className="sticky top-0 z-10 flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-7 sm:py-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">Đối chiếu trước khi xử lý</p>
+                <h2 id="budget-dialog-title" className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">Ngân sách của yêu cầu {detail.requestCode}</h2>
+                <p className="mt-1 text-sm text-slate-500">Số liệu theo dự án, giai đoạn và hạng mục chi phí liên quan.</p>
+              </div>
+              <button type="button" autoFocus onClick={() => setBudgetContextOpen(false)} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Đóng ×</button>
+            </div>
+
+            <div className="space-y-5 p-5 sm:p-7">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <PopupFact label="Dự án" value={`${detail.project.projectCode} · ${detail.project.name}`} />
+                <PopupFact label="Giai đoạn" value={`${detail.phase.phaseCode} · ${detail.phase.name}`} />
+                <PopupFact label="Hạng mục chi phí" value={budgetContext?.categoryName || detail.categoryName || "Chưa có hạng mục"} />
+                <PopupFact label="Khoản đang xem" value={formatCurrency(detail.approvedAmount)} accent />
+              </div>
+
+              {budgetContextLoading && <div role="status" className="rounded-2xl border border-blue-200 bg-blue-50 p-6 text-center text-sm font-medium text-blue-800">Đang lấy ngân sách mới nhất…</div>}
+
+              {!budgetContextLoading && budgetContextError && (
+                <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
+                  <p className="font-semibold">Không tải được ngân sách</p>
+                  <p className="mt-1">{budgetContextError}</p>
+                  <button type="button" onClick={() => void loadBudgetContext()} className="mt-3 rounded-xl bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-800">Thử tải lại</button>
+                </div>
+              )}
+
+              {!budgetContextLoading && budgetContext && (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                    <p>Số liệu tính lúc <strong>{formatDateTime(budgetContext.calculatedAt)}</strong>. Khi xác nhận, hệ thống kiểm tra lại ngân sách mới nhất.</p>
+                    <button type="button" onClick={() => void loadBudgetContext()} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-100">Làm mới</button>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-3">
+                    <BudgetScopeCard title="Toàn dự án" scope={budgetContext.project} />
+                    <BudgetScopeCard title={`Giai đoạn · ${budgetContext.phaseCode}`} scope={budgetContext.phase} />
+                    {budgetContext.category ? <BudgetScopeCard title={`Hạng mục · ${budgetContext.categoryName ?? "Chi phí"}`} scope={budgetContext.category} /> : <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Yêu cầu chưa có ngân sách hạng mục để đối chiếu. Cần làm rõ trước khi xử lý.</div>}
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700">
+                    <p className="font-bold text-slate-900">Cách đọc số liệu</p>
+                    <p className="mt-1">Khả dụng trước yêu cầu = hạn mức − chi phí đã ghi nhận − tiền giữ cho yêu cầu khác − tạm ứng chưa quyết toán. “Còn sau xử lý” cho thấy tác động dự kiến của yêu cầu này.</p>
+                    <p className="mt-2">{detail.type === RequestType.ADVANCE ? "Tạm ứng được giải ngân trước khi có chi phí thực tế. Khoản còn treo tiếp tục chiếm ngân sách đến khi quyết toán hoặc hoàn trả." : detail.type === RequestType.REIMBURSE ? "Quyết toán chuyển tiền tạm ứng còn treo thành chi phí được xác nhận, không chuyển thêm tiền và không trừ ngân sách lần hai." : isVerifiedExpenseWaitingForPayment ? "Chi phí đã được ghi khi chứng từ hợp lệ được xác nhận. Thanh toán hoàn chi vào ví nhân viên không ghi thêm chi phí." : "Khoản nhân viên đã tự chi được ghi nhận là chi phí khi chứng từ được Kế toán xác nhận."}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
 
       {showRejectModal && (
         <div className="fixed inset-0 z-50">
@@ -981,31 +956,48 @@ function InfoCard({
   );
 }
 
-function ChecklistItem({
-  checked,
-  onToggle,
-  label,
-  hint,
-}: {
-  checked: boolean;
-  onToggle: () => void;
-  label: string;
-  hint?: string;
-}) {
+function SectionHeading({ number, title, description }: { number: string; title: string; description: string }) {
   return (
-    <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3 cursor-pointer hover:border-slate-200 transition-colors">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onToggle}
-        className="mt-0.5 h-4 w-4 rounded border-slate-200 bg-white text-emerald-500 focus:ring-emerald-500/50"
-      />
-      <span className="text-sm text-slate-700">
-        {label}
-        {hint && (
-          <span className="block text-xs text-slate-500 mt-1">{hint}</span>
-        )}
-      </span>
-    </label>
+    <div className="flex items-start gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-xs font-bold text-blue-800">{number}</span>
+      <div><h2 className="text-base font-bold text-slate-900">{title}</h2><p className="mt-1 text-sm text-slate-500">{description}</p></div>
+    </div>
+  );
+}
+
+function PopupFact({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className={`min-w-0 rounded-2xl border p-4 ${accent ? "border-blue-200 bg-blue-50" : "border-slate-200 bg-white"}`}>
+      <p className="text-xs font-medium text-slate-500">{label}</p>
+      <p className={`mt-1 break-words text-sm font-semibold ${accent ? "text-blue-800" : "text-slate-900"}`}>{value}</p>
+    </div>
+  );
+}
+
+function BudgetScopeCard({ title, scope }: { title: string; scope: DisbursementBudgetScope }) {
+  const additionalExposure = scope.availableNow - scope.availableAfterThisRequest;
+  const items = [
+    ["Hạn mức", scope.budgetLimit],
+    ["Chi phí đã ghi nhận", scope.recognizedExpense],
+    ["Đang giữ cho yêu cầu khác", scope.reservedForOtherRequests],
+    ["Tạm ứng chưa quyết toán", scope.openAdvance],
+  ] as const;
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="font-bold text-slate-900">{title}</h4>
+        <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${scope.availableAfterThisRequest < 0 ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-800"}`}>
+          {scope.availableAfterThisRequest < 0 ? "Cần xem lại hạn mức" : "Trong hạn mức"}
+        </span>
+      </div>
+      <dl className="mt-3 space-y-2">
+        {items.map(([label, amount]) => <div key={label} className="flex items-start justify-between gap-3 text-xs"><dt className="text-slate-500">{label}</dt><dd className="text-right font-semibold tabular-nums text-slate-800">{formatCurrency(amount)}</dd></div>)}
+      </dl>
+      <div className="mt-4 border-t border-slate-100 pt-3">
+        <div className="flex items-center justify-between gap-3 text-xs"><span className="text-slate-500">Khả dụng trước yêu cầu</span><strong className="tabular-nums text-slate-800">{formatCurrency(scope.availableNow)}</strong></div>
+        <div className="mt-2 flex items-center justify-between gap-3 text-xs"><span className="text-slate-500">Yêu cầu này chiếm thêm</span><strong className="tabular-nums text-slate-800">{formatCurrency(additionalExposure)}</strong></div>
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3"><span className="text-xs font-semibold text-slate-700">Còn sau xử lý</span><strong className={`text-base font-bold tabular-nums ${scope.availableAfterThisRequest < 0 ? "text-rose-700" : "text-emerald-700"}`}>{formatCurrency(scope.availableAfterThisRequest)}</strong></div>
+      </div>
+    </div>
   );
 }
