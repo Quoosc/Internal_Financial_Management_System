@@ -11,6 +11,7 @@ import {
   ManagerApproveResponse,
   ManagerRejectBody,
   ManagerRejectResponse,
+  ProjectStatus,
   RequestAction,
   RequestStatus,
 } from "@/types";
@@ -276,6 +277,13 @@ export default function ManagerApprovalDetailPage({ params }: PageProps) {
   }
 
   const overDeptBudget = request.amount > request.department.totalAvailableBalance;
+  // See isOverBudget() in manager/approvals/page.tsx for why this proxy
+  // (totalBudget - availableBudget) is used instead of the backend's exact
+  // availableBudget + totalSpent + amount > totalBudget check: totalSpent
+  // isn't exposed on this DTO, and this conservative proxy avoids false
+  // "over budget" warnings while the backend remains authoritative.
+  const overProjectBudget = request.amount > request.project.totalBudget - request.project.availableBudget;
+  const projectInactive = request.project.status !== ProjectStatus.ACTIVE;
 
   const sortedTimeline = [...request.timeline].sort(
     (a, b) => (parseApiDate(a.createdAt)?.getTime() ?? 0) - (parseApiDate(b.createdAt)?.getTime() ?? 0)
@@ -316,6 +324,11 @@ export default function ManagerApprovalDetailPage({ params }: PageProps) {
                   <span className={`inline-flex rounded-full border px-3 py-1.5 text-sm font-semibold ${statusClass(request.status)}`}>
                     {statusLabel(request.status)}
                   </span>
+                  {projectInactive && (
+                    <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm font-semibold text-rose-700">
+                      Dự án không còn hoạt động
+                    </span>
+                  )}
                 </div>
                 <p className="text-3xl font-bold">{formatCurrency(request.amount)}</p>
               </div>
@@ -367,6 +380,16 @@ export default function ManagerApprovalDetailPage({ params }: PageProps) {
                 value={formatCurrency(request.project.availableBudget + previewApprovedAmount)}
               />
             </div>
+            {projectInactive && (
+              <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                Dự án hiện không ở trạng thái <strong>Đang hoạt động</strong>. Hệ thống sẽ từ chối phê duyệt cấp vốn cho dự án này.
+              </div>
+            )}
+            {!projectInactive && overProjectBudget && (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Số tiền yêu cầu có thể vượt ngân sách kế hoạch (tổng ngân sách) của dự án. Hệ thống sẽ kiểm tra lại chính xác khi phê duyệt.
+              </div>
+            )}
           </div>
 
           <div

@@ -325,7 +325,7 @@ export default function ManagerProjectDetailPage({ params }: PageProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <InfoCard label="Trưởng nhóm" value={leader?.fullName ?? "Chưa gán"} />
-          <InfoCard label="Phòng ban" value={`Phòng ban #${project.departmentId}`} />
+          <InfoCard label="Phòng ban" value={project.departmentName} />
           <InfoCard label="Ngày tạo" value={formatDate(project.createdAt)} />
           <InfoCard label="Mô tả" value={project.description ?? "Không có mô tả"} />
         </div>

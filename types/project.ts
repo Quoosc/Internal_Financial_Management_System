@@ -100,6 +100,7 @@ export interface ProjectDetailResponse {
   availableBudget: number;
   totalSpent: number;
   departmentId: number;
+  departmentName: string;
   managerId: number;
   currentPhaseId: number | null;
   phases: ProjectPhaseResponse[];

@@ -19,7 +19,6 @@ type MemberRole = "TEAM_LEADER" | "EMPLOYEE";
 
 type ManagerMemberView = ManagerDeptMemberListItem & {
   role: MemberRole;
-  projectsCount: number;
 };
 
 
@@ -49,13 +48,9 @@ function inferRole(member: ManagerDeptMemberListItem): MemberRole {
 }
 
 function normalizeMember(member: ManagerDeptMemberListItem): ManagerMemberView {
-  const withCounts = member as ManagerDeptMemberListItem & {
-    projectsCount?: number;
-  };
   return {
     ...member,
     role: inferRole(member),
-    projectsCount: withCounts.projectsCount ?? 0,
   };
 }
 
