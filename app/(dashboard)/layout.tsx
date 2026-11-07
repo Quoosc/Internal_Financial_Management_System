@@ -494,6 +494,11 @@ function getNavGroups(role: RoleName | undefined): NavGroup[] {
               href: "/cfo/system-fund",
               icon: icons.systemFund,
             },
+            {
+              label: "Đối soát ngân hàng",
+              href: "/cfo/reconciliation",
+              icon: icons.ledger,
+            },
           ],
         },
       ];

@@ -213,7 +213,7 @@ export default function AdminSystemFundPage() {
         </div>
       </div>
 
-      <a href={canManageFund ? "/accountant/ledger/reconciliation" : "#"} className="inline-flex rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">Đối soát sao kê và xác nhận phạm vi tài khoản →</a>
+      <a href={canManageFund ? (hasAnyRole([RoleName.CFO]) ? "/cfo/reconciliation" : "/accountant/ledger/reconciliation") : "#"} className="inline-flex rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">Đối soát sao kê và xác nhận phạm vi tài khoản →</a>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
           title="Số dư hệ thống"
