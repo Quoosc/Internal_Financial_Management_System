@@ -201,17 +201,22 @@ export default function TLProjectDetailPage({ params }: PageProps) {
         if (cancelled) return;
         setAvailableMembers(mRes.data);
         setExpenseCategories(cRes.data);
-      } catch {
+      } catch (err) {
         if (cancelled) return;
         setAvailableMembers([]);
         setExpenseCategories([]);
+        toast.error(
+          err instanceof ApiError
+            ? err.apiMessage
+            : "Không thể tải danh sách thành viên và danh mục chi phí.",
+        );
       }
     };
     void loadAux();
     return () => {
       cancelled = true;
     };
-  }, [project]);
+  }, [project, toast]);
 
   useEffect(() => {
     if (!project || !selectedPhaseId) {
@@ -225,16 +230,21 @@ export default function TLProjectDetailPage({ params }: PageProps) {
           `/api/v1/team-leader/projects/${project.id}/categories?phaseId=${selectedPhaseId}`,
         );
         if (!cancelled) setPhaseCategories(res.data);
-      } catch {
+      } catch (err) {
         if (cancelled) return;
         setPhaseCategories(null);
+        toast.error(
+          err instanceof ApiError
+            ? err.apiMessage
+            : "Không thể tải ngân sách danh mục của giai đoạn.",
+        );
       }
     };
     void load();
     return () => {
       cancelled = true;
     };
-  }, [project, selectedPhaseId, expenseCategories]);
+  }, [project, selectedPhaseId, expenseCategories, toast]);
 
   const budgetSummary = useMemo(() => {
     if (!project) {
@@ -717,8 +727,8 @@ export default function TLProjectDetailPage({ params }: PageProps) {
             prev ? { ...prev, categories: prev.categories.filter((c) => c.categoryId !== categoryId) } : prev,
           );
           toast.success(`Đã xóa danh mục "${categoryName}".`);
-        } catch {
-          toast.error("Không thể xóa danh mục. Vui lòng thử lại.");
+        } catch (err) {
+          toast.error(err instanceof ApiError ? err.apiMessage : "Không thể xóa danh mục. Vui lòng thử lại.");
         } finally {
           setSubmitting(false);
         }
@@ -757,8 +767,8 @@ export default function TLProjectDetailPage({ params }: PageProps) {
       );
       setExpenseCategories(catRefreshed.data);
       toast.success(`Đã thêm danh mục "${body.name}" vào giai đoạn.`);
-    } catch {
-      toast.error("Không thể tạo danh mục. Vui lòng thử lại.");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.apiMessage : "Không thể tạo danh mục. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
       setShowCreateCategory(false);

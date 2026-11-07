@@ -208,7 +208,7 @@ export default function TLProjectsPage() {
         <MetricCard label="Tổng dự án" value={total.toLocaleString("vi-VN")} helper={`${items.length} đang hiển thị`} tone="blue" />
         <MetricCard label="Đang chạy" value={String(activeOnPage)} helper="Dự án đang hoạt động trên trang" tone="emerald" />
         <MetricCard label="Ngân sách còn lại" value={formatCurrency(availableOnPage)} helper="Tổng khả dụng trên trang" tone="cyan" />
-        <MetricCard label="Cần chú ý" value={String(atRiskOnPage)} helper="Tỷ lệ sử dụng từ 85% trở lên" tone="rose" />
+        <MetricCard label="Cần chú ý" value={String(atRiskOnPage)} helper="Tỷ lệ sử dụng từ 85% trở lên, trên trang" tone="rose" />
       </section>
 
       <section className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm">

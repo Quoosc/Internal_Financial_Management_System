@@ -134,6 +134,10 @@ export function TeamLeaderDashboard() {
 
   const [approvals, setApprovals] = useState<TLApprovalListItem[]>([]);
   const [projects, setProjects] = useState<TLProjectListItem[]>([]);
+  const [pendingTotal, setPendingTotal] = useState(0);
+  const [projectsTotal, setProjectsTotal] = useState(0);
+  const [activeProjectsTotal, setActiveProjectsTotal] = useState(0);
+  const [membersTotal, setMembersTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -147,14 +151,21 @@ export function TeamLeaderDashboard() {
       void fetchWallet();
 
       try {
-        const [approvalRes, projectRes] = await Promise.all([
-          api.get<PaginatedResponse<unknown> | unknown[]>(
-            "/api/v1/team-leader/approvals?page=0&size=3&status=PENDING",
-          ),
-          api.get<PaginatedResponse<TLProjectListItem> | TLProjectListItem[]>(
-            "/api/v1/team-leader/projects?page=0&size=3",
-          ),
-        ]);
+        const [approvalRes, projectRes, activeProjectRes, memberRes] =
+          await Promise.all([
+            api.get<PaginatedResponse<unknown> | unknown[]>(
+              "/api/v1/team-leader/approvals?page=0&size=3&status=PENDING",
+            ),
+            api.get<PaginatedResponse<TLProjectListItem> | TLProjectListItem[]>(
+              "/api/v1/team-leader/projects?page=1&limit=3",
+            ),
+            api.get<PaginatedResponse<unknown> | unknown[]>(
+              "/api/v1/team-leader/projects?page=1&limit=1&status=ACTIVE",
+            ),
+            api.get<PaginatedResponse<unknown> | unknown[]>(
+              "/api/v1/team-leader/team-members?page=1&limit=1",
+            ),
+          ]);
 
         if (cancelled) return;
 
@@ -164,11 +175,36 @@ export function TeamLeaderDashboard() {
             .slice(0, 3),
         );
         setProjects(pickItems(projectRes.data).slice(0, 3));
+
+        setPendingTotal(
+          Array.isArray(approvalRes.data)
+            ? pickItems(approvalRes.data).length
+            : approvalRes.data.total,
+        );
+        setProjectsTotal(
+          Array.isArray(projectRes.data)
+            ? pickItems(projectRes.data).length
+            : projectRes.data.total,
+        );
+        setActiveProjectsTotal(
+          Array.isArray(activeProjectRes.data)
+            ? pickItems(activeProjectRes.data).length
+            : activeProjectRes.data.total,
+        );
+        setMembersTotal(
+          Array.isArray(memberRes.data)
+            ? pickItems(memberRes.data).length
+            : memberRes.data.total,
+        );
       } catch (err) {
         if (cancelled) return;
 
         setApprovals([]);
         setProjects([]);
+        setPendingTotal(0);
+        setProjectsTotal(0);
+        setActiveProjectsTotal(0);
+        setMembersTotal(0);
 
         if (err instanceof ApiError) {
           setError(err.apiMessage);
@@ -187,17 +223,9 @@ export function TeamLeaderDashboard() {
     };
   }, [fetchWallet]);
 
-  const totalMembers = useMemo(
-    () => projects.reduce((sum, project) => sum + project.memberCount, 0),
-    [projects],
-  );
   const pendingAmount = useMemo(
     () => approvals.reduce((sum, item) => sum + item.amount, 0),
     [approvals],
-  );
-  const activeProjects = useMemo(
-    () => projects.filter((project) => project.status === "ACTIVE").length,
-    [projects],
   );
 
   const todayLabel = useMemo(
@@ -267,7 +295,7 @@ export function TeamLeaderDashboard() {
             />
             <StatCard
               title="Chờ duyệt"
-              value={String(approvals.length)}
+              value={String(pendingTotal)}
               href="/team-leader/approvals"
               accent="text-amber-700"
               icon={
@@ -288,7 +316,7 @@ export function TeamLeaderDashboard() {
             />
             <StatCard
               title="Dự án"
-              value={`${activeProjects}/${projects.length}`}
+              value={`${activeProjectsTotal}/${projectsTotal}`}
               href="/team-leader/projects"
               accent="text-sky-700"
               icon={
@@ -309,7 +337,7 @@ export function TeamLeaderDashboard() {
             />
             <StatCard
               title="Thành viên"
-              value={String(totalMembers)}
+              value={String(membersTotal)}
               href="/team-leader/team"
               accent="text-indigo-700"
               icon={
