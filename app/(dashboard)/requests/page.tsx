@@ -308,7 +308,7 @@ export default function RequestsPage() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.28),_transparent_32%),radial-gradient(circle_at_bottom_left,_rgba(125,211,252,0.24),_transparent_34%)]" />
           <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">Personal requests</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">Yêu cầu cá nhân · IFMS</p>
               <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Yêu cầu của tôi</h1>
               <p className="mt-3 max-w-xl text-sm leading-6 text-blue-100">
                 {createAction?.description ??

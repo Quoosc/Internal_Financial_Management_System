@@ -112,9 +112,9 @@ export default function DepositHistoryPage() {
           <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute bottom-0 right-10 h-24 w-24 rounded-full bg-cyan-300/20 blur-2xl" />
           <div className="relative max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">IFMS workspace</p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Deposit history</h1>
-            <p className="mt-3 text-sm leading-6 text-blue-100">Filter VNPay top-up transactions by status and payment date.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">Ví cá nhân · IFMS</p>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Lịch sử nạp tiền</h1>
+            <p className="mt-3 text-sm leading-6 text-blue-100">Tra cứu các lần nạp VNPay theo trạng thái và thời gian thanh toán.</p>
           </div>
         </div>
       </section>
@@ -129,11 +129,6 @@ export default function DepositHistoryPage() {
           </svg>
           Quay lại
         </Link>
-      </div>
-
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Lịch sử nạp tiền</h1>
-        <p className="text-slate-500 mt-1">Toàn bộ các lần nạp tiền VNPay của bạn.</p>
       </div>
 
       {/* Filters */}

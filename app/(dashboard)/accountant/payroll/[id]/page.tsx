@@ -312,8 +312,8 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
 
       {activeStep === 1 && <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-bold text-slate-900">Nhập bảng lương qua Excel</h2>
-        <p className="text-sm leading-6 text-slate-600">T?i m?u ??ng k?, xem tr??c c?c d?ng v? x?c nh?n to?n l? ? trang Nhập / xuất Excel. File sai kh?ng x?a d? li?u ?ang c?. Ch? k? nh?p ???c ph?p thay th?.</p>
-        <div className="flex flex-wrap gap-3"><Link href={`/data-exchange?dataset=payroll&scope=${id}`} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white">Mở nhập / xuất bảng lương</Link>{hasEntries && <button onClick={() => setActiveStep(2)} className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-blue-700">Xem bảng lương hiện có</button>}</div>
+        <p className="text-sm leading-6 text-slate-600">Tải mẫu đăng ký, xem trước các dòng và xác nhận toàn bộ lô tại trang Dữ liệu &amp; báo cáo. File không hợp lệ không xóa dữ liệu đang có; chỉ kỳ nháp được phép thay thế.</p>
+        <div className="flex flex-wrap gap-3"><Link href={`/data-exchange?dataset=payroll&scope=${id}`} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white">Mở trang dữ liệu lương</Link>{hasEntries && <button onClick={() => setActiveStep(2)} className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-blue-700">Xem bảng lương hiện có</button>}</div>
       </section>}
 
       {activeStep === 2 && (

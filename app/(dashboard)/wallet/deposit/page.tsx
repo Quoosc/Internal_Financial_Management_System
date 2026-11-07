@@ -71,22 +71,16 @@ export default function DepositPage() {
           <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute bottom-0 right-10 h-24 w-24 rounded-full bg-cyan-300/20 blur-2xl" />
           <div className="relative max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">Không gian IFMS</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">Ví cá nhân · IFMS</p>
             <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Nạp tiền qua VNPay</h1>
-            <p className="mt-3 text-sm leading-6 text-blue-100">Tạo giao dịch nạp tiền vào ví và lưu mã thanh toán để thuận tiện tra cứu.</p>
+            <p className="mt-3 text-sm leading-6 text-blue-100">Tạo yêu cầu nạp vào ví cá nhân qua VNPay và tra cứu trạng thái thanh toán.</p>
           </div>
         </div>
       </section>
 
       <BackButton fallbackHref="/wallet" />
 
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Nạp tiền qua VNPay</h1>
-          <p className="text-slate-500 mt-1">
-            Nhập số tiền để tạo liên kết thanh toán. Hệ thống sẽ chuyển hướng đến VNPay để hoàn tất giao dịch.
-          </p>
-        </div>
+      <div className="flex justify-end">
         <Link
           href="/wallet/deposit/my"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition-colors shrink-0"

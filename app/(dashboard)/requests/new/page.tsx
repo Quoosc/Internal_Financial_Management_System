@@ -897,10 +897,10 @@ export default function NewRequestPage() {
           <div className="relative p-6 sm:p-8">
             <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
             <div className="relative max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">IFMS workspace</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">Yêu cầu · IFMS</p>
               <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Tạo yêu cầu</h1>
               <p className="mt-3 text-sm leading-6 text-blue-100">
-                Hệ thống chỉ hiển thị chức năng tạo yêu cầu phù hợp với vai trò hiện tại của bạn.
+                Hệ thống chỉ hiển thị loại yêu cầu phù hợp với vai trò hiện tại của bạn.
               </p>
             </div>
           </div>
@@ -949,41 +949,36 @@ export default function NewRequestPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-blue-200 bg-linear-to-br from-blue-700 via-blue-600 to-cyan-600 text-white shadow-xl shadow-blue-900/15">
-        <div className="relative p-6 sm:p-8">
-          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute bottom-0 right-10 h-24 w-24 rounded-full bg-cyan-300/20 blur-2xl" />
-          <div className="relative max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">IFMS workspace</p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Create request</h1>
-            <p className="mt-3 text-sm leading-6 text-blue-100">Submit advance, expense or reimbursement requests with project context and evidence files.</p>
-          </div>
-        </div>
-      </section>
-
       <button
         type="button"
-        onClick={() => router.back()}
-        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white transition-colors"
+        onClick={() => router.push("/requests")}
+        className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-blue-700"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
         </svg>
-        Quay lại
+        Danh sách yêu cầu
       </button>
 
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Tạo yêu cầu mới</h1>
-          <p className="text-slate-500 mt-1">
-            Tạo yêu cầu chi tiêu cá nhân: Tạm ứng, Hoàn chi nhân viên, Quyết toán tạm ứng.
-          </p>
+      <section className="overflow-hidden rounded-3xl border border-blue-200 bg-linear-to-br from-blue-700 via-blue-600 to-indigo-700 text-white shadow-xl shadow-blue-900/10">
+        <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100">Hồ sơ yêu cầu · IFMS</p>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Tạo yêu cầu mới</h1>
+            <p className="mt-2 text-sm text-blue-100">Chọn nghiệp vụ, dự án và nội dung chi; đính kèm tài liệu theo loại yêu cầu.</p>
+          </div>
+          <span className="w-fit rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-sm font-semibold">3 phần thông tin</span>
         </div>
-      </div>
+      </section>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* ── 1. Loại yêu cầu + nơi chi tiêu ── */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+            <h2 className="text-lg font-bold text-slate-900">1. Loại yêu cầu và dự án</h2>
+            <p className="mt-1 text-sm text-slate-500">Xác định khoản chi và nơi sử dụng ngân sách.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-slate-600 mb-3">Loại yêu cầu</label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1069,7 +1064,7 @@ export default function NewRequestPage() {
 
             <div>
               <label className="block text-sm font-medium text-slate-600 mb-2">
-                Phase{linkedLocked && <AiFilledBadge kind="advance" />}
+                Giai đoạn{linkedLocked && <AiFilledBadge kind="advance" />}
               </label>
               <select
                 value={form.phaseId?.toString() ?? ""}
@@ -1117,11 +1112,17 @@ export default function NewRequestPage() {
               {fieldErrors.categoryId && <p className="text-xs text-rose-600 mt-1">{fieldErrors.categoryId}</p>}
             </div>
           </div>
-        </div>
+          </div>
+        </section>
 
         {/* ── 2. Chứng từ — AI đọc ngay khi tải lên ── */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-5">
-          <label className="block text-sm font-medium text-slate-600 mb-2">Đính kèm chứng từ (image/pdf)</label>
+        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+            <h2 className="text-lg font-bold text-slate-900">2. Chứng từ và tài liệu</h2>
+            <p className="mt-1 text-sm text-slate-500">{form.type === RequestType.ADVANCE ? "Có thể thêm dự toán hoặc báo giá để làm căn cứ xem xét." : "Đính kèm hóa đơn hoặc biên nhận cho khoản chi thực tế."}</p>
+          </div>
+          <div className="p-5">
+          <label className="mb-2 block text-sm font-medium text-slate-600">Tệp đính kèm (JPG, PNG, PDF)</label>
 
           {scanEligible && (
             <div className="mb-3 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800">
@@ -1217,7 +1218,8 @@ export default function NewRequestPage() {
               ))}
             </div>
           )}
-        </div>
+          </div>
+        </section>
 
         {previewItem && (
           <ReceiptPreviewModal
@@ -1229,7 +1231,12 @@ export default function NewRequestPage() {
         )}
 
         {/* ── 3. Nội dung chi — các ô AI có thể điền ── */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+            <h2 className="text-lg font-bold text-slate-900">3. Nội dung và số tiền</h2>
+            <p className="mt-1 text-sm text-slate-500">{form.type === RequestType.ADVANCE ? "Nêu rõ mục đích sử dụng khoản tiền được tạm ứng." : "Kiểm tra thông tin được đọc từ chứng từ trước khi gửi."}</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-slate-600 mb-2">
               Số tiền (VND){aiFilled.has("amount") && <AiFilledBadge kind="ai" />}
@@ -1309,12 +1316,13 @@ export default function NewRequestPage() {
             )}
             {fieldErrors.description && <p className="text-xs text-rose-600 mt-1">{fieldErrors.description}</p>}
           </div>
-        </div>
+          </div>
+        </section>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-end gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => router.push("/requests")}
             className="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition-colors"
           >
             Hủy

@@ -213,8 +213,9 @@ export default function AccountantDisbursementDetailPage({
   );
   const allChecked = useMemo(
     () => Object.entries(checklist).every(([key, checked]) =>
-      (isVerifiedExpenseWaitingForPayment && key === "budgetAvailable") || checked),
-    [checklist, isVerifiedExpenseWaitingForPayment],
+      (isVerifiedExpenseWaitingForPayment && key === "budgetAvailable") ||
+      (detail?.type === RequestType.ADVANCE && key === "attachmentsReviewed") || checked),
+    [checklist, detail?.type, isVerifiedExpenseWaitingForPayment],
   );
 
   const tlApprovalEntry = useMemo(() => {
@@ -602,13 +603,14 @@ export default function AccountantDisbursementDetailPage({
             <ChecklistItem
               checked={checklist.amountVerified}
               onToggle={() => handleChecklistChange("amountVerified")}
-              label={`Số tiền khớp chứng từ (${formatCurrency(detail.approvedAmount)})`}
+              label={`${detail.type === RequestType.ADVANCE ? "Số tiền khớp đề nghị đã duyệt" : "Số tiền khớp chứng từ"} (${formatCurrency(detail.approvedAmount)})`}
             />
 
             <ChecklistItem
               checked={checklist.attachmentsReviewed}
               onToggle={() => handleChecklistChange("attachmentsReviewed")}
-              label="Đã xem xét tất cả chứng từ đính kèm"
+              label={detail.type === RequestType.ADVANCE ? "Đã xem căn cứ dự toán / tài liệu hỗ trợ (nếu có)" : "Đã xem xét tất cả hóa đơn, chứng từ đính kèm"}
+              hint={detail.type === RequestType.ADVANCE ? "Tài liệu hỗ trợ không phải hóa đơn; chứng từ thực tế nộp khi quyết toán sau chi." : undefined}
             />
 
             <ChecklistItem
@@ -634,12 +636,18 @@ export default function AccountantDisbursementDetailPage({
           {!isVerifiedExpenseWaitingForPayment && (detail.type === "EXPENSE" || detail.type === "REIMBURSE") && <FinancialDocumentEditor documents={documentDrafts} amount={detail.approvedAmount ?? detail.amount} onChange={setDocumentDrafts} />}
           <div className="order-2 rounded-3xl border border-slate-200 bg-white p-5 space-y-4">
             <h2 className="text-lg font-semibold text-slate-900">
-              Chứng từ đính kèm
+              {detail.type === RequestType.ADVANCE ? "Căn cứ dự toán đính kèm" : "Hóa đơn / chứng từ đính kèm"}
             </h2>
 
+            <p className="text-xs leading-5 text-slate-500">
+              {detail.type === RequestType.ADVANCE
+                ? "Tạm ứng là khoản tiền cấp trước khi chi. Báo giá/dự toán giúp xem xét mục đích và mức tiền; không phải hóa đơn và không bắt buộc có hóa đơn trước giải ngân."
+                : "Hồ sơ chi thực tế cần có hóa đơn/biên nhận và thông tin đủ để đối chiếu số tiền, ngày, đơn vị bán, nội dung chi và yêu cầu liên quan."}
+            </p>
+
             {detail.attachments.length === 0 ? (
-              <p className="text-sm text-slate-500">
-                Không có chứng từ đính kèm.
+              <p className={`rounded-xl border px-3 py-2 text-sm ${detail.type === RequestType.ADVANCE ? "border-blue-200 bg-blue-50 text-blue-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+                {detail.type === RequestType.ADVANCE ? "Chưa có tài liệu dự toán đính kèm. Có thể xem xét dựa trên nội dung yêu cầu và thông tin ngân sách." : "Thiếu hóa đơn/chứng từ đính kèm. Cần bổ sung hồ sơ hợp lệ trước khi xác nhận."}
               </p>
             ) : (
               <div className="space-y-3">

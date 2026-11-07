@@ -2,17 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@/contexts/wallet-context";
 import { ApiError, api } from "@/lib/api-client";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { useToast } from "@/contexts/toast-context";
-import {
-  AdvanceBalanceItem,
-  AdvanceReturnResponse,
-  LedgerEntryResponse,
-  TransactionDirection,
-} from "@/types";
+import { LedgerEntryResponse, TransactionDirection } from "@/types";
 
 
 
@@ -51,13 +46,6 @@ export default function WalletPage() {
 
   const [transactions, setTransactions] = useState<LedgerEntryResponse[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
-  const [advances, setAdvances] = useState<AdvanceBalanceItem[]>([]);
-  const [advancesLoading, setAdvancesLoading] = useState(true);
-  const [selectedAdvance, setSelectedAdvance] = useState<AdvanceBalanceItem | null>(null);
-  const [returnAmount, setReturnAmount] = useState("");
-  const [returnNote, setReturnNote] = useState("");
-  const [returnError, setReturnError] = useState<string | null>(null);
-  const [returnSubmitting, setReturnSubmitting] = useState(false);
   const toast = useToast();
 
   const loadRecentTransactions = useCallback(async () => {
@@ -80,65 +68,10 @@ export default function WalletPage() {
     }
   }, [toast]);
 
-  const loadAdvanceBalances = useCallback(async () => {
-    setAdvancesLoading(true);
-    try {
-      const response = await api.get<AdvanceBalanceItem[]>("/api/v1/requests/my-advance-balances");
-      setAdvances(response.data ?? []);
-    } catch (err) {
-      setAdvances([]);
-      if (err instanceof ApiError) toast.error(err.apiMessage);
-      else toast.error("Không tải được danh sách tạm ứng còn phải quyết toán.");
-    } finally {
-      setAdvancesLoading(false);
-    }
-  }, [toast]);
-
   useEffect(() => {
     void fetchWallet();
     void loadRecentTransactions();
-    void loadAdvanceBalances();
-  }, [fetchWallet, loadAdvanceBalances, loadRecentTransactions]);
-
-  const returnOperation = useRef<{ payload: string; key: string } | null>(null);
-  async function handleAdvanceReturn() {
-    if (!selectedAdvance) return;
-    const amount = Number(returnAmount);
-    const availableBalance = wallet?.availableBalance ?? 0;
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setReturnError("Nhập số tiền hoàn lớn hơn 0.");
-      return;
-    }
-    if (amount > selectedAdvance.remainingAmount) {
-      setReturnError("Số tiền hoàn không được vượt quá khoản còn phải quyết toán.");
-      return;
-    }
-    if (amount > availableBalance) {
-      setReturnError("Số dư khả dụng trong ví không đủ để hoàn khoản tiền này.");
-      return;
-    }
-
-    const payload = JSON.stringify([selectedAdvance.id, amount, returnNote.trim()]);
-    if (returnOperation.current?.payload !== payload) returnOperation.current = { payload, key: crypto.randomUUID() };
-    setReturnSubmitting(true);
-    setReturnError(null);
-    try {
-      const response = await api.post<AdvanceReturnResponse>(
-        "/api/v1/requests/my-advance-balances/" + selectedAdvance.id + "/return",
-        { amount, note: returnNote.trim() || undefined, idempotencyKey: returnOperation.current.key },
-      );
-      toast.success("Đã hoàn " + formatCurrency(response.data.returnedAmount) + " về quỹ dự án. Mã giao dịch: " + response.data.transactionCode);
-      returnOperation.current = null;
-      setSelectedAdvance(null);
-      setReturnAmount("");
-      setReturnNote("");
-      await Promise.all([fetchWallet(), loadRecentTransactions(), loadAdvanceBalances()]);
-    } catch (err) {
-      setReturnError(err instanceof ApiError ? err.apiMessage : "Không thể hoàn tiền tạm ứng. Vui lòng thử lại.");
-    } finally {
-      setReturnSubmitting(false);
-    }
-  }
+  }, [fetchWallet, loadRecentTransactions]);
 
   return (
     <div className="space-y-6">
@@ -147,7 +80,7 @@ export default function WalletPage() {
           <div className="max-w-3xl">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-50">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
-              Personal wallet
+              Ví cá nhân · IFMS
             </div>
             <h1 className="text-3xl font-bold tracking-tight">Ví của tôi</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-100">
@@ -163,39 +96,6 @@ export default function WalletPage() {
         <MetricCard label="Tổng số dư" value={walletLoading ? "Đang tải..." : formatCurrency(wallet?.balance ?? 0)} tone="emerald" />
         <MetricCard label="Đang khóa" value={walletLoading ? "Đang tải..." : formatCurrency(wallet?.lockedBalance ?? 0)} tone="amber" />
       </section>
-
-      {(advancesLoading || advances.length > 0) && (
-        <section className="overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm">
-          <div className="flex flex-col justify-between gap-2 border-b border-amber-100 bg-amber-50/70 px-5 py-4 sm:flex-row sm:items-center">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">Tạm ứng còn phải quyết toán</h2>
-              <p className="mt-1 text-sm text-slate-600">Chọn đúng khoản tạm ứng để hoàn tiền thật từ ví của bạn về ví dự án.</p>
-            </div>
-            {!advancesLoading && <span className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-semibold text-amber-800">{advances.length} khoản đang mở</span>}
-          </div>
-          <div className="divide-y divide-slate-100">
-            {advancesLoading ? (
-              <div className="px-5 py-8 text-center text-sm text-slate-500">Đang tải các khoản tạm ứng…</div>
-            ) : advances.map((advance) => (
-              <div key={advance.id} className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="grid flex-1 gap-3 sm:grid-cols-4">
-                  <div><p className="text-xs text-slate-500">Mã tạm ứng</p><p className="mt-1 font-mono text-sm font-semibold text-blue-700">{advance.requestCode}</p></div>
-                  <div><p className="text-xs text-slate-500">Dự án</p><p className="mt-1 text-sm font-medium text-slate-800">{advance.projectName || "Không có thông tin"}</p></div>
-                  <div><p className="text-xs text-slate-500">Đã nhận</p><p className="mt-1 text-sm text-slate-700">{formatCurrency(advance.originalAmount)}</p></div>
-                  <div><p className="text-xs text-slate-500">Còn phải quyết toán</p><p className="mt-1 text-sm font-bold text-amber-800">{formatCurrency(advance.remainingAmount)}</p></div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { setSelectedAdvance(advance); setReturnAmount(""); setReturnNote(""); setReturnError(null); }}
-                  className="inline-flex shrink-0 items-center justify-center rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700"
-                >
-                  Hoàn tiền tạm ứng
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* Hero wallet card */}
       <div
@@ -373,35 +273,6 @@ export default function WalletPage() {
         </div>
 
       </div>
-
-      {selectedAdvance && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-          <section role="dialog" aria-modal="true" aria-labelledby="advance-return-title" className="w-full max-w-lg space-y-5 rounded-3xl bg-white p-6 shadow-2xl">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Hoàn tiền thật về ví dự án</p>
-              <h2 id="advance-return-title" className="mt-1 text-xl font-bold text-slate-900">{selectedAdvance.requestCode}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Số dư khoản còn phải quyết toán là <strong>{formatCurrency(selectedAdvance.remainingAmount)}</strong>. Tiền hoàn sẽ được trừ từ số dư khả dụng trong ví của bạn.</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 p-4 text-sm">
-              <div><p className="text-xs text-slate-500">Ví khả dụng</p><p className="mt-1 font-semibold text-slate-900">{formatCurrency(wallet?.availableBalance ?? 0)}</p></div>
-              <div><p className="text-xs text-slate-500">Còn phải quyết toán</p><p className="mt-1 font-semibold text-amber-800">{formatCurrency(selectedAdvance.remainingAmount)}</p></div>
-            </div>
-            <label className="block text-sm font-medium text-slate-700">
-              Số tiền muốn hoàn
-              <input type="number" min="0.01" step="1" value={returnAmount} onChange={(event) => { setReturnAmount(event.target.value); setReturnError(null); }} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="Nhập số tiền" />
-            </label>
-            <label className="block text-sm font-medium text-slate-700">
-              Ghi chú (không bắt buộc)
-              <textarea rows={2} maxLength={500} value={returnNote} onChange={(event) => setReturnNote(event.target.value)} className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" placeholder="Ví dụ: Hoàn phần tiền chưa sử dụng" />
-            </label>
-            {returnError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{returnError}</p>}
-            <div className="flex justify-end gap-3">
-              <button type="button" disabled={returnSubmitting} onClick={() => setSelectedAdvance(null)} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Hủy</button>
-              <button type="button" disabled={returnSubmitting || !returnAmount} onClick={() => void handleAdvanceReturn()} className="rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50">{returnSubmitting ? "Đang xử lý…" : "Xác nhận hoàn tiền"}</button>
-            </div>
-          </section>
-        </div>
-      )}
 
     </div>
   );

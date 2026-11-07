@@ -229,19 +229,12 @@ export default function TransactionsPage() {
           <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute bottom-0 right-10 h-24 w-24 rounded-full bg-cyan-300/20 blur-2xl" />
           <div className="relative max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">IFMS workspace</p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Wallet transactions</h1>
-            <p className="mt-3 text-sm leading-6 text-blue-100">Track every wallet movement, status and transaction reference.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">Ví cá nhân · IFMS</p>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Lịch sử giao dịch</h1>
+            <p className="mt-3 text-sm leading-6 text-blue-100">Tra cứu các khoản tiền vào, tiền ra, trạng thái và mã giao dịch trên ví của bạn.</p>
           </div>
         </div>
       </section>
-
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Lịch sử giao dịch</h1>
-        <p className="text-slate-500 mt-1">
-          Theo dõi toàn bộ biến động ví của bạn.
-        </p>
-      </div>
 
       <div className="rounded-3xl border border-slate-200 bg-white p-4 md:p-5">
         <div className="flex flex-wrap items-end gap-3">

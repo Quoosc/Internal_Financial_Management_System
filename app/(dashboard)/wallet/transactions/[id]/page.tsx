@@ -112,9 +112,9 @@ export default function TransactionDetailPage({ params }: TransactionDetailPageP
           <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute bottom-0 right-10 h-24 w-24 rounded-full bg-cyan-300/20 blur-2xl" />
           <div className="relative max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">IFMS workspace</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">Ví cá nhân · IFMS</p>
             <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Chi tiết giao dịch</h1>
-            <p className="mt-3 text-sm leading-6 text-blue-100">Kiểm tra mã giao dịch, số tiền, loại và thời gian xử lý.</p>
+            <p className="mt-3 text-sm leading-6 text-blue-100">Kiểm tra số tiền, hướng tiền, trạng thái và thời gian xử lý.</p>
           </div>
         </div>
       </section>
@@ -128,11 +128,6 @@ export default function TransactionDetailPage({ params }: TransactionDetailPageP
         </svg>
         Quay lại
       </Link>
-
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Chi tiết giao dịch</h1>
-        <p className="text-slate-500 mt-1">Mã giao dịch: {transaction?.transactionCode ?? id}</p>
-      </div>
 
       {loading ? (
         <div className="h-64 rounded-2xl bg-white animate-pulse" />

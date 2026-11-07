@@ -345,7 +345,7 @@ export function EmployeeDashboard() {
           <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute bottom-0 right-10 h-24 w-24 rounded-full bg-cyan-300/20 blur-2xl" />
           <div className="relative max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">IFMS workspace</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">Không gian IFMS</p>
             <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
               Xin chào, {user?.fullName || "Bạn"}
             </h1>

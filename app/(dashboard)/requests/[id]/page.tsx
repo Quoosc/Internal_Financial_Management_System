@@ -447,22 +447,10 @@ export default function RequestDetailPage({ params }: PageProps) {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-blue-200 bg-linear-to-br from-blue-700 via-blue-600 to-cyan-600 text-white shadow-xl shadow-blue-900/15">
-        <div className="relative p-6 sm:p-8">
-          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute bottom-0 right-10 h-24 w-24 rounded-full bg-cyan-300/20 blur-2xl" />
-          <div className="relative max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">IFMS workspace</p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Request detail</h1>
-            <p className="mt-3 text-sm leading-6 text-blue-100">Review amount, evidence, approval timeline and request status in one view.</p>
-          </div>
-        </div>
-      </section>
-
       <button
         type="button"
         onClick={() => router.push("/requests")}
-        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white transition-colors"
+        className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-white hover:text-blue-700"
       >
         <svg
           className="w-4 h-4"
@@ -477,37 +465,52 @@ export default function RequestDetailPage({ params }: PageProps) {
             d="M15 19l-7-7 7-7"
           />
         </svg>
-        Quay lại danh sách
+        Danh sách yêu cầu
       </button>
 
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            {request.requestCode}
-          </h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Tạo lúc: {formatDateTime(request.createdAt)}
-          </p>
+      <section className="overflow-hidden rounded-3xl border border-blue-200 bg-linear-to-br from-blue-700 via-blue-600 to-indigo-700 text-white shadow-xl shadow-blue-900/10">
+        <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100">Hồ sơ yêu cầu · IFMS</p>
+            <h1 className="mt-2 break-all text-2xl font-bold tracking-tight sm:text-3xl">{request.requestCode}</h1>
+            <p className="mt-2 text-sm text-blue-100">Theo dõi nội dung, chứng từ và các bước xử lý của yêu cầu.</p>
+          </div>
+          <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-sm">
+            <p className="text-xs text-blue-100">Ngày tạo</p>
+            <p className="mt-1 text-sm font-semibold">{formatDateTime(request.createdAt)}</p>
+          </div>
         </div>
+      </section>
 
-        <div className="flex flex-wrap gap-2">
-          <RequestTypeBadge type={request.type} />
-          <RequestStatusBadge status={request.status} type={request.type} />
+      <section className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Tổng quan yêu cầu</h2>
+          <p className="mt-1 text-sm text-slate-500">Số tiền và trạng thái xử lý hiện tại.</p>
         </div>
-      </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs text-slate-500">Số tiền đề nghị</p>
+            <p className="mt-2 text-xl font-bold text-slate-900">{formatCurrency(request.amount)}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="mb-2 text-xs text-slate-500">Loại yêu cầu</p>
+            <RequestTypeBadge type={request.type} />
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="mb-2 text-xs text-slate-500">Trạng thái</p>
+            <RequestStatusBadge status={request.status} type={request.type} />
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-6">
-          <div className="rounded-3xl border border-slate-200 bg-white shadow-sm p-5 space-y-5">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Chi tiết yêu cầu
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DetailCell
-                label="Số tiền"
-                value={formatCurrency(request.amount)}
-              />
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+              <h2 className="text-lg font-bold text-slate-900">Nội dung đề nghị</h2>
+              <p className="mt-1 text-sm text-slate-500">Dự án, giai đoạn và nội dung sử dụng tiền.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
               <DetailCell label="Tiêu đề" value={parsed.title || "—"} />
               <DetailCell
                 label="Dự án"
@@ -517,14 +520,14 @@ export default function RequestDetailPage({ params }: PageProps) {
                 }
               />
               <DetailCell
-                label="Phase"
+                label="Giai đoạn"
                 value={
                   `${request.phaseCode ?? ""} ${request.phaseName ?? ""}`.trim() ||
                   "—"
                 }
               />
               <DetailCell
-                label="Category"
+                label="Hạng mục chi phí"
                 value={request.categoryName ?? "—"}
               />
               <DetailCell
@@ -535,19 +538,20 @@ export default function RequestDetailPage({ params }: PageProps) {
               />
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+            <div className="mx-5 mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs text-slate-500">Mô tả</p>
               <p className="text-sm text-slate-900 mt-1 whitespace-pre-line">
                 {parsed.body || request.description || "Không có mô tả"}
               </p>
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-3xl border border-slate-200 bg-white shadow-sm p-5">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">
-              Tệp đính kèm
-            </h2>
-
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+              <h2 className="text-lg font-bold text-slate-900">Tệp đính kèm</h2>
+              <p className="mt-1 text-sm text-slate-500">Chứng từ và tài liệu tham chiếu của yêu cầu.</p>
+            </div>
+            <div className="p-5">
             {request.attachments.length === 0 ? (
               <p className="text-sm text-slate-500">Không có tệp đính kèm.</p>
             ) : (
@@ -586,14 +590,13 @@ export default function RequestDetailPage({ params }: PageProps) {
                 ))}
               </div>
             )}
-          </div>
+            </div>
+          </section>
 
           {canEditOrCancel && (
-            <div className="rounded-3xl border border-slate-200 bg-white shadow-sm p-5">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">
-                Thao tác
-              </h2>
-              <div className="flex flex-wrap gap-3">
+            <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-200 bg-slate-50 px-5 py-4"><h2 className="text-lg font-bold text-slate-900">Thao tác</h2><p className="mt-1 text-sm text-slate-500">Chỉnh sửa hoặc hủy yêu cầu khi còn trong trạng thái cho phép.</p></div>
+              <div className="flex flex-wrap gap-3 p-5">
                 <button
                   type="button"
                   onClick={openEdit}
@@ -612,16 +615,16 @@ export default function RequestDetailPage({ params }: PageProps) {
                   Hủy yêu cầu
                 </button>
               </div>
-            </div>
+            </section>
           )}
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white shadow-sm p-5">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">
-            Lịch sử xử lý
-          </h2>
-
-          <div className="space-y-3">
+        <section className="h-fit overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+            <h2 className="text-lg font-bold text-slate-900">Lịch sử xử lý</h2>
+            <p className="mt-1 text-sm text-slate-500">Các bước đã được thực hiện trên yêu cầu.</p>
+          </div>
+          <div className="space-y-3 p-5">
             {timelineRows.map((row, index) => (
               <div key={`${row.title}-${index}`} className="relative pl-8">
                 {index < timelineRows.length - 1 && (
@@ -642,7 +645,7 @@ export default function RequestDetailPage({ params }: PageProps) {
               </div>
             ))}
           </div>
-        </div>
+        </section>
       </div>
 
       {editing && (

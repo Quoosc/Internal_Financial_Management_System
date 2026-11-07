@@ -225,7 +225,7 @@ export default function PayrollPage() {
           <div className="max-w-3xl">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-50">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
-              Personal payroll
+              Phiếu lương · Cá nhân
             </div>
             <h1 className="text-3xl font-bold tracking-tight">Phiếu lương</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-100">
@@ -238,13 +238,6 @@ export default function PayrollPage() {
           </div>
         </div>
       </section>
-
-      <div className="hidden">
-        <h1 className="text-2xl font-bold text-slate-900">Phiếu lương</h1>
-        <p className="text-slate-500 mt-1">
-          Danh sách phiếu lương cá nhân theo từng kỳ.
-        </p>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-5">

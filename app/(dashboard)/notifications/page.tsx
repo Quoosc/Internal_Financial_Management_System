@@ -309,6 +309,11 @@ export default function NotificationsPage() {
           <ul className="divide-y divide-slate-100">
             {notifications.map((item) => {
               const target = getNotificationTarget(item);
+              const isDemoDataNotice = item.type === NotificationType.SYSTEM && item.refType === "DEMO_DATASET";
+              const displayTitle = isDemoDataNotice ? "Cập nhật hệ thống" : toUserFacingText(item.title);
+              const displayMessage = isDemoDataNotice
+                ? "Hệ thống có thông tin mới. Truy cập các trang chức năng để xem nội dung liên quan."
+                : toUserFacingText(item.message);
               const rowClassName = `w-full px-5 py-4 text-left transition ${
                 item.isRead
                   ? target
@@ -327,8 +332,8 @@ export default function NotificationsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-slate-900 md:text-base">{toUserFacingText(item.title)}</p>
-                        <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">{toUserFacingText(item.message)}</p>
+                        <p className="truncate text-sm font-bold text-slate-900 md:text-base">{displayTitle}</p>
+                        <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">{displayMessage}</p>
                       </div>
                       <span className="shrink-0 text-xs font-medium text-slate-500">{formatRelativeTime(item.createdAt)}</span>
                     </div>

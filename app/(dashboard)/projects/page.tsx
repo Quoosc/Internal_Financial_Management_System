@@ -214,55 +214,36 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-blue-200 bg-linear-to-br from-blue-700 via-blue-600 to-cyan-600 text-white shadow-xl shadow-blue-900/15">
-        <div className="relative p-6 sm:p-8">
-          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute bottom-0 right-10 h-24 w-24 rounded-full bg-cyan-300/20 blur-2xl" />
-          <div className="relative max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">Không gian IFMS</p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Dự án của tôi</h1>
-            <p className="mt-3 text-sm leading-6 text-blue-100">Theo dõi ngân sách, giai đoạn hiện tại và tiến độ của các dự án bạn đang tham gia.</p>
+      <section className="overflow-hidden rounded-3xl border border-blue-200 bg-linear-to-br from-blue-700 via-blue-600 to-indigo-700 text-white shadow-xl shadow-blue-900/10">
+        <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
+          <div className="max-w-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100">Không gian IFMS</p>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Dự án</h1>
+            <p className="mt-3 text-sm leading-6 text-blue-100">Theo dõi các dự án bạn tham gia, giai đoạn hiện tại và tình hình sử dụng ngân sách.</p>
+          </div>
+          <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 backdrop-blur-sm">
+            <p className="text-xs font-medium text-blue-100">Dự án trong kết quả</p>
+            <p className="mt-1 text-2xl font-bold">{loading ? "—" : total}</p>
           </div>
         </div>
       </section>
 
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dự án</h1>
-        <p className="text-slate-500 mt-1">Xem danh sách và tiến độ các dự án.</p>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {statusTabs.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            onClick={() => handleStatusChange(tab.value)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
-              statusFilter === tab.value
-                ? "bg-blue-100 border-blue-300 text-blue-700"
-                : "border border-slate-200 bg-white text-slate-600 hover:bg-blue-50"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <form onSubmit={handleSearchSubmit} className="flex gap-2">
-        <input
-          type="text"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Tìm theo mã hoặc tên dự án..."
-          className="flex-1 px-4 py-2.5 rounded-2xl border border-slate-200 bg-white text-slate-700 placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-        />
-        <button
-          type="submit"
-          className="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors"
-        >
-          Tìm
-        </button>
-      </form>
+      <section className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div><h2 className="text-base font-bold text-slate-900">Lọc danh sách</h2><p className="mt-1 text-sm text-slate-500">Tìm nhanh theo tên, mã dự án hoặc trạng thái.</p></div>
+          <form onSubmit={handleSearchSubmit} className="flex w-full gap-2 xl:max-w-xl">
+            <input type="search" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Tìm theo mã hoặc tên dự án..." className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+            <button type="submit" className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700">Tìm kiếm</button>
+          </form>
+        </div>
+        <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+          {statusTabs.map((tab) => (
+            <button key={tab.value} type="button" onClick={() => handleStatusChange(tab.value)} className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${statusFilter === tab.value ? "border-blue-600 bg-blue-600 text-white shadow-sm" : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"}`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {loading ? (
         <div className="flex items-center justify-center py-16">
@@ -272,11 +253,17 @@ export default function ProjectsPage() {
           </svg>
         </div>
       ) : projects.length === 0 ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-500 text-sm">
-          Không có dự án phù hợp bộ lọc.
+        <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center">
+          <p className="font-semibold text-slate-800">Không tìm thấy dự án phù hợp</p>
+          <p className="mt-1 text-sm text-slate-500">Thử đổi trạng thái hoặc từ khóa tìm kiếm.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <section className="space-y-4">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-base font-bold text-slate-900">Danh sách dự án</h2>
+          <span className="text-sm text-slate-500">{projects.length} kết quả trên trang này</span>
+        </div>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {projects.map((project) => {
             const spentPercent = getSpentPercent(project);
             const budget = getProjectBudget(project);
@@ -287,12 +274,12 @@ export default function ProjectsPage() {
                 key={project.id}
                 type="button"
                 onClick={() => router.push(`/projects/${project.id}`)}
-                className="border border-slate-200 bg-white hover:border-slate-200 rounded-3xl p-5 text-left transition-all hover:bg-blue-50/50 space-y-4"
+                className="group rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-900/5"
               >
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs text-slate-500">{project.projectCode}</p>
-                    <p className="text-base font-semibold text-slate-900 mt-0.5 truncate">{project.name}</p>
+                    <p className="font-mono text-xs font-semibold tracking-wide text-blue-700">{project.projectCode}</p>
+                    <p className="mt-1.5 truncate text-base font-bold text-slate-900 group-hover:text-blue-800">{project.name}</p>
                   </div>
                   <span
                     className={`shrink-0 inline-flex px-2.5 py-1 rounded-full border text-xs font-medium ${getStatusClass(project.status)}`}
@@ -301,18 +288,17 @@ export default function ProjectsPage() {
                   </span>
                 </div>
 
-                {project.currentPhaseName && (
-                  <p className="text-xs text-slate-500">
-                    Giai đoạn hiện tại: <span className="text-slate-700">{project.currentPhaseName}</span>
-                  </p>
-                )}
+                <div className="rounded-2xl bg-slate-50 px-3.5 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Giai đoạn hiện tại</p>
+                  <p className="mt-1 truncate text-sm font-medium text-slate-800">{project.currentPhaseName || "Chưa xác định"}</p>
+                </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500">Tiến độ ngân sách</span>
-                    <span className="text-slate-600 font-medium">{spentPercent}%</span>
+                    <span className="font-medium text-slate-600">Ngân sách đã sử dụng</span>
+                    <span className="font-bold text-slate-800">{spentPercent}%</span>
                   </div>
-                  <div className="h-2 rounded-full border border-slate-200 bg-white overflow-hidden">
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                     <div
                       className={`h-full transition-all ${getBurnClass(spentPercent)}`}
                       style={{ width: `${spentPercent}%` }}
@@ -320,16 +306,16 @@ export default function ProjectsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2">
+                <div className="grid grid-cols-3 gap-2 border-t border-slate-100 pt-4">
+                  <div className="rounded-xl bg-slate-50 px-3 py-2.5">
                     <p className="text-[11px] text-slate-500">Hạn mức</p>
                     <p className="text-xs font-semibold text-slate-900 mt-0.5">{formatCurrency(budget)}</p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2">
+                  <div className="rounded-xl bg-rose-50/70 px-3 py-2.5">
                     <p className="text-[11px] text-slate-500">Đã chi</p>
                     <p className="text-xs font-semibold text-rose-700 mt-0.5">{formatCurrency(getProjectSpent(project))}</p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2">
+                  <div className="rounded-xl bg-emerald-50/70 px-3 py-2.5">
                     <p className="text-[11px] text-slate-500">Khả dụng</p>
                     <p className="text-xs font-semibold text-emerald-700 mt-0.5">{formatCurrency(remaining)}</p>
                   </div>
@@ -338,9 +324,10 @@ export default function ProjectsPage() {
             );
           })}
         </div>
+        </section>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-500">
           Tổng {total} dự án • Trang {page}/{totalPages}
         </p>
@@ -350,7 +337,7 @@ export default function ProjectsPage() {
             type="button"
             onClick={() => handlePageChange(page - 1)}
             disabled={page <= 1}
-            className="px-3 py-1.5 rounded-xl bg-blue-100 hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 text-sm transition-colors"
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Trước
           </button>
@@ -358,7 +345,7 @@ export default function ProjectsPage() {
             type="button"
             onClick={() => handlePageChange(page + 1)}
             disabled={page >= totalPages}
-            className="px-3 py-1.5 rounded-xl bg-blue-100 hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 text-sm transition-colors"
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Sau
           </button>
