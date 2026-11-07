@@ -119,7 +119,18 @@ function humanizeAuditToken(value: string): string {
 
 function auditEntityLabel(entityName: string | null | undefined): string {
   if (!entityName) return "dữ liệu hệ thống";
-  return AUDIT_ENTITY_LABELS[entityName] ?? humanizeAuditToken(entityName);
+  const known = AUDIT_ENTITY_LABELS[entityName];
+  if (known) return known;
+
+  const readable = entityName
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ");
+  const translated: Record<string, string> = {
+    ExcelExportLog: "lịch sử xuất Excel",
+    ExpenseCategory: "hạng mục chi phí",
+    AdvanceBalance: "số dư tạm ứng",
+  };
+  return translated[entityName] ?? humanizeAuditToken(readable);
 }
 
 function auditActionLabel(action: string, entityName: string | null | undefined): string {
@@ -130,6 +141,13 @@ function auditActionLabel(action: string, entityName: string | null | undefined)
     }
     return semanticLabel;
   }
+
+  const crudVerbs: Record<string, string> = {
+    INSERT: "Tạo mới",
+    UPDATE: "Cập nhật",
+    DELETE: "Xóa",
+  };
+  if (crudVerbs[action]) return `${crudVerbs[action]} ${auditEntityLabel(entityName)}`;
 
   return humanizeAuditToken(action).replace(/^\w/, (char) => char.toUpperCase());
 }
@@ -242,7 +260,7 @@ export function AdminDashboard() {
       } catch (dashboardErr) {
         try {
           const [usersRes, departmentsRes, auditsRes, companyFundRes] = await Promise.all([
-            api.get<PaginatedResponse<AdminUserListItem> | AdminUserListItem[]>("/api/v1/admin/users?page=1&limit=1"),
+            api.get<PaginatedResponse<AdminUserListItem> | AdminUserListItem[]>("/api/v1/admin/users?status=ACTIVE&page=1&limit=1"),
             api.get<PaginatedResponse<DepartmentListItem> | DepartmentListItem[]>("/api/v1/admin/departments?page=1&limit=1"),
             api.get<PaginatedResponse<AuditLogResponse> | AuditLogResponse[]>("/api/v1/admin/audit?page=1&limit=5"),
             api.get<CompanyFundResponse>("/api/v1/company-fund"),
@@ -352,7 +370,7 @@ export function AdminDashboard() {
           [...Array(4)].map((_, i) => <div key={`admin-skel-${i}`} className="h-24 rounded-2xl bg-white animate-pulse" />)
         ) : (
           <>
-            <StatCard title="Tổng người dùng" value={String(dashboard?.totalUsers ?? 0)} href="/admin/users" accent="text-blue-700"
+            <StatCard title="Tài khoản đang hoạt động" value={String(dashboard?.totalUsers ?? 0)} href="/admin/users?status=ACTIVE" accent="text-blue-700"
               icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197" /></svg>}
             />
             <StatCard title="Tổng phòng ban" value={String(dashboard?.totalDepartments ?? 0)} href="/admin/departments" accent="text-emerald-700"

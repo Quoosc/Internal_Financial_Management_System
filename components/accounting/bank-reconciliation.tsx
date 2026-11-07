@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BankCandidatePicker } from "./bank-candidate-picker";
 import { useAuth } from "@/contexts/auth-context";
 import { RoleName } from "@/types";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError, api } from "@/lib/api-client";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { CompanyFundResponse, ReconciliationReportResponse } from "@/types";
@@ -28,7 +28,31 @@ export default function BankReconciliation() {
   const [matchError, setMatchError] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [dateReady, setDateReady] = useState(false);
+  const dateNavigation = useRef(false);
   useEffect(() => {
+    const restore = () => {
+      const params = new URLSearchParams(window.location.search);
+      setFrom(params.get("from") || ""); setTo(params.get("to") || ""); setDateReady(true);
+    };
+    restore(); window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, []);
+  useEffect(() => {
+    if (!dateReady) return;
+    const params = new URLSearchParams(window.location.search);
+    if (from) params.set("from", from); else params.delete("from");
+    if (to) params.set("to", to); else params.delete("to");
+    const query = params.toString(); const next = `${window.location.pathname}${query ? `?${query}` : ""}`;
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (current !== next) {
+      if (dateNavigation.current) window.history.pushState(window.history.state, "", next);
+      else window.history.replaceState(window.history.state, "", next);
+    }
+    dateNavigation.current = true;
+  }, [dateReady, from, to]);
+  useEffect(() => {
+    if (!dateReady) return;
     let active = true; setLoading(true); setError(""); setLines([]); setFund(null); setReport(null);
     const load = async () => {
       try {
@@ -43,7 +67,7 @@ export default function BankReconciliation() {
       finally { if (active) setLoading(false); }
     };
     void load(); return () => { active = false; };
-  }, [reload, from, to]);
+  }, [dateReady, reload, from, to]);
   const configure = async () => {
     setBusy(true); setError("");
     try { await api.post("/api/v1/accountant/ledger/bank-evidence/account", { account, bankName: name, evidenceRef: evidence, purpose: "CORPORATE_OPERATING_POOL" }); setEvidence(""); setReload(n => n + 1); }

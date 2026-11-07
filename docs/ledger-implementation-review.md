@@ -1,5 +1,27 @@
 # IFMS — review triển khai sổ cái và Excel
 
+> **Cập nhật thực hiện ngày 06/11/2026:** người dùng đã duyệt và đang triển khai
+> [kế hoạch hoàn tất P0–P6](ledger-finalization-plan.md). Đã bổ sung kiểm tra
+> ngoại lệ đóng kỳ có phân trang, đồng bộ URL ở các trang đối chiếu và mở sổ,
+> kiểm tra nội dung export cho dataset theo sáu vai trò và kiểm kê chỉ đọc DB
+> local. Kết quả test và phần còn chờ chứng từ/UAT được ghi ở đầu kế hoạch.
+
+> **Cập nhật tiếp ngày 06/11/2026:** hồi quy PostgreSQL đã kiểm tranh chấp
+> đóng kỳ/ghi journal và chuỗi phiếu lương gốc → đảo → thay thế. Toàn bộ
+> `FinancialWorkflowIntegrationTest` đạt **20/20** trên database dùng một lần,
+> migrate sạch tới V36. Close chờ khóa kỳ; trigger từ chối ghi journal vào kỳ
+> đã đóng; retry thay lương trả lại cùng phiếu mới. UAT giao diện sáu vai trò
+> vẫn thuộc P5. Database IFMS local không bị sửa trong lượt kiểm thử này.
+
+> **UAT đọc/điều hướng ngày 06/11/2026:** dùng bản sao DB Docker local, API thật
+> và frontend production build. Sáu vai trò mở được trang tài chính theo quyền;
+> Accountant mở các nhánh sổ cái; hai giao dịch ví dẫn đúng sang request và
+> payslip. Hai lượt Playwright đạt **8/8 + 2/2** ca. Export theo catalog sáu role
+> trả hơn 50 workbook XLSX; phần này mới xác nhận quyền và định dạng file,
+> chưa đối chiếu đầy đủ số tiền từng báo cáo với API cùng mốc. U01–U12 còn
+> thao tác ghi và đối chiếu trước/sau. Tài khoản thử chỉ được chuẩn hóa trong
+> bản sao; token tạm đã xóa và dịch vụ kiểm thử đã dừng.
+
 ## Kiểm tra luồng thực tế — 05/11/2026
 
 Kiểm tra trên **bản sao PostgreSQL 16 của database IFMS đang dùng** (nguồn ở V18),
@@ -659,3 +681,30 @@ Sau sửa F01–F11 cần chạy lại và lưu report kèm phiên bản/môi tr
 [fe-account-filter]: <../components/accounting/account-ledger.tsx:24>
 [be-advance-list]: <../../../LẬP TRÌNH JAVA/IFMS/src/main/java/com/mkwang/backend/modules/accounting/service/AccountingJournalServiceImpl.java:281>
 [be-match-candidates]: <../../../LẬP TRÌNH JAVA/IFMS/src/main/java/com/mkwang/backend/modules/wallet/service/WalletFinancialEvidenceService.java:67>
+
+
+## Cập nhật review — 07/11/2026
+
+### Xác minh được trong lượt này
+
+- `npx playwright test -c playwright.ledger.config.ts`: **19/19 đạt** trên production build/server với API fixture. Bao gồm phục hồi URL/back-forward cho Excel, đối soát và mở sổ; lỗi API/retry; bộ chọn theo tên/mã; đổi scope xóa xác nhận; phân trang ngoại lệ đóng kỳ, ngân sách và matching; hiển thị lỗi journal/transaction.
+- `npm run build`: đạt, TypeScript và tạo route hoàn tất.
+- Backend `mvnw.cmd -Dtest=FinancialWorkflowIntegrationTest test`: Maven compile/test discovery đạt nhưng **20/20 bị skip** vì môi trường không có Docker engine. Không xem đây là integration pass.
+- `git diff --check`: không phát hiện whitespace error.
+
+### Lỗi / giới hạn còn mở
+
+1. **Lint frontend thất bại:** 8 lỗi `react-hooks/set-state-in-effect` tại journal detail, request source detail, account ledger, bank candidate picker và reference picker; còn 9 warning lint. Chưa chứng minh đây là lỗi runtime, nhưng CI lint hiện không xanh.
+2. **Kiểm thử tích hợp backend bị skip:** thiếu Docker daemon/Testcontainers. Cần khởi động Docker Desktop rồi chạy lại bộ `FinancialWorkflowIntegrationTest` trên PostgreSQL cô lập.
+3. **UAT P5 chưa có:** chưa xác minh thao tác ghi thực tế và số liệu sau mỗi bước U01–U12 qua giao diện sáu role; không ghi lên DB chính.
+4. **P3 chưa đối chiếu toàn diện:** chưa có báo cáo kết quả từng dataset × role × scope và so sánh workbook với API/DB cùng snapshot. F16–F18 có mã xử lý hiện hữu; phần xác minh nội dung vẫn mở.
+5. **P4 chờ chứng từ:** inventory hiện tại ghi các nhóm thiếu đối chiếu. Không thể tạo journal cho EXPENSE thiếu hóa đơn/phân bổ, payroll thiếu giao dịch chi hoặc topup thiếu sao kê BOOKED. Cần chứng từ và người có quyền xác nhận số dư trước khi backfill.
+
+### Lỗi phát sinh trong quá trình kiểm tra
+
+- Lệnh Playwright đầu tiên chạy không kèm `-c playwright.ledger.config.ts`, nên Playwright không có `baseURL` và 19 ca báo invalid URL. Đây là lỗi cách gọi test, không phải lỗi ứng dụng. Chạy lại bằng config đúng đạt 19/19.
+- Không phát hiện regression UI mới từ bộ fixture. Chưa đủ bằng chứng để tuyên bố không còn lỗi nghiệp vụ vì live API/database UAT và chuyển đổi lịch sử chưa chạy.
+
+### Trạng thái tổng thể
+
+P0/P1 đã hoàn tất theo bằng chứng trong plan; P2 fixture đạt nhưng live acceptance còn mở; P3 một phần; P4 inventory xong nhưng backfill chờ hồ sơ; P5 chưa đạt do thiếu DB clone/Docker; P6 chưa thể đóng. Toàn bộ kế hoạch **chưa hoàn tất 100%**.

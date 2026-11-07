@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import Link from "next/link";
 import { ReferencePicker } from "@/components/accounting/reference-picker";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useRouter } from "next/navigation";
@@ -135,7 +134,7 @@ export default function AccountantLedgerPage() {
     const restore = () => {
       const params = new URLSearchParams(window.location.search);
       const requested = params.get("tab");
-      setTab(requested && ["wallet", "journal", "advances", "budget"].includes(requested) ? requested as LedgerTab : "wallet");
+      setTab(requested && ["wallet", "journal", "advances"].includes(requested) ? requested as LedgerTab : "wallet");
       setSearch(params.get("search") || "");
       setType(params.get("type") || ""); setStatus(params.get("status") || "");
       setReferenceType(params.get("referenceType") || ""); setEvent(params.get("event") || "");
@@ -302,22 +301,15 @@ export default function AccountantLedgerPage() {
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
         <TabButton active={tab === "wallet"} onClick={() => setTabAndReset("wallet")}>Giao dịch ví</TabButton>
         <TabButton active={tab === "journal"} onClick={() => setTabAndReset("journal")}>Sổ cái kế toán</TabButton>
-        <Link href="/accountant/ledger/accounts" className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-700">Sổ theo tài khoản</Link>
-        <Link href="/accountant/ledger/cost-reconciliation" className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-700">Đối chiếu chi phí</Link>
-        <Link href="/accountant/ledger/history" className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-700">Lịch sử và mở sổ</Link>
-        <Link href="/accountant/ledger/periods" className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-700">Kỳ kế toán</Link>
-        <Link href="/accountant/ledger/reconciliation" className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-700">Đối soát ngân hàng</Link>
-        <TabButton active={tab === "budget"} onClick={() => setTabAndReset("budget")}>Ngân sách & tạm ứng</TabButton>
         <button
           type="button"
           onClick={() => setTabAndReset("advances")}
           title="Tạm ứng còn phải quyết toán theo nhân viên"
-          aria-label="Mở danh sách nhân viên còn tạm ứng phải quyết toán"
-          className={`ml-auto inline-flex h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition ${tab === "advances" ? "border-blue-600 bg-blue-600 text-white shadow-sm" : "border-slate-200 bg-white text-slate-700 hover:bg-blue-50 hover:text-blue-700"}`}
+          aria-label="Tạm ứng còn phải quyết toán theo nhân viên"
+          className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border transition ${tab === "advances" ? "border-blue-600 bg-blue-600 text-white shadow-sm" : "border-slate-200 bg-white text-slate-700 hover:bg-blue-50 hover:text-blue-700"}`}
         >
           <AdvanceIcon />
-          <span className="hidden sm:inline">Tạm ứng còn mở</span>
-          {advanceRows.length > 0 && <span className={`min-w-5 rounded-full px-1.5 py-0.5 text-[11px] ${tab === "advances" ? "bg-white/20" : "bg-amber-100 text-amber-800"}`}>{advanceRows.length}</span>}
+          <span className="sr-only">Tạm ứng còn phải quyết toán</span>
         </button>
       </div>
 

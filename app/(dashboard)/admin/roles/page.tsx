@@ -55,6 +55,7 @@ const PERMISSION_GROUPS: Array<{
       Permission.WALLET_DEPOSIT,
       Permission.WALLET_WITHDRAW,
       Permission.WALLET_TRANSACTION_VIEW,
+      Permission.WALLET_VIEW_ALL,
       Permission.TRANSACTION_APPROVE_WITHDRAW,
     ],
   },
@@ -159,6 +160,10 @@ const PERMISSION_COPY: Record<Permission, { label: string; description: string }
   [Permission.WALLET_TRANSACTION_VIEW]: {
     label: "Xem lịch sử giao dịch ví",
     description: "Cho phép xem các giao dịch nạp, rút, nhận lương và chi trả phát sinh trên ví.",
+  },
+  [Permission.WALLET_VIEW_ALL]: {
+    label: "Xem các ví của tổ chức",
+    description: "Cho phép xem số dư và lịch sử giao dịch của ví dự án, phòng ban và quỹ công ty.",
   },
   [Permission.TRANSACTION_APPROVE_WITHDRAW]: {
     label: "Xử lý yêu cầu rút tiền",
@@ -304,11 +309,11 @@ const ROLE_PERMISSION_SET: Record<RoleName, Set<Permission>> = {
     Permission.WALLET_DEPOSIT,
     Permission.WALLET_WITHDRAW,
     Permission.WALLET_TRANSACTION_VIEW,
+    Permission.PROJECT_VIEW_ACTIVE,
     Permission.REQUEST_CREATE,
     Permission.REQUEST_VIEW_SELF,
     Permission.PAYROLL_VIEW_SELF,
     Permission.PAYROLL_DOWNLOAD,
-    Permission.PROJECT_VIEW_ACTIVE,
   ]),
   [RoleName.TEAM_LEADER]: new Set<Permission>([
     Permission.USER_PROFILE_VIEW,
@@ -319,19 +324,16 @@ const ROLE_PERMISSION_SET: Record<RoleName, Set<Permission>> = {
     Permission.WALLET_DEPOSIT,
     Permission.WALLET_WITHDRAW,
     Permission.WALLET_TRANSACTION_VIEW,
-    Permission.REQUEST_VIEW_SELF,
-    Permission.REQUEST_VIEW_DEPT,
-    Permission.REQUEST_APPROVE_TEAM_LEADER,
-    Permission.REQUEST_REJECT,
-    Permission.REQUEST_VIEW_APPROVED,
     Permission.PROJECT_VIEW_ACTIVE,
-    Permission.PROJECT_PHASE_MANAGE,
-    Permission.PROJECT_MEMBER_MANAGE,
+    Permission.REQUEST_CREATE,
+    Permission.REQUEST_VIEW_SELF,
     Permission.PROJECT_CATEGORY_MANAGE,
     Permission.PROJECT_BUDGET_ALLOCATE,
-    Permission.DEPT_VIEW_DASHBOARD,
+    Permission.PROJECT_PHASE_MANAGE,
+    Permission.PROJECT_MEMBER_MANAGE,
     Permission.PAYROLL_VIEW_SELF,
-    Permission.COMPANY_FUND_VIEW,
+    Permission.PAYROLL_DOWNLOAD,
+    Permission.REQUEST_APPROVE_TEAM_LEADER,
   ]),
   [RoleName.MANAGER]: new Set<Permission>([
     Permission.USER_PROFILE_VIEW,
@@ -342,20 +344,19 @@ const ROLE_PERMISSION_SET: Record<RoleName, Set<Permission>> = {
     Permission.WALLET_DEPOSIT,
     Permission.WALLET_WITHDRAW,
     Permission.WALLET_TRANSACTION_VIEW,
+    Permission.PROJECT_VIEW_ACTIVE,
+    Permission.REQUEST_CREATE,
     Permission.REQUEST_VIEW_SELF,
+    Permission.PAYROLL_VIEW_SELF,
+    Permission.PAYROLL_DOWNLOAD,
+    Permission.PROJECT_CREATE,
+    Permission.PROJECT_UPDATE,
+    Permission.PROJECT_STATUS_MANAGE,
+    Permission.PROJECT_ASSIGN_LEADER,
     Permission.REQUEST_VIEW_DEPT,
     Permission.REQUEST_APPROVE_PROJECT_TOPUP,
     Permission.REQUEST_REJECT,
-    Permission.REQUEST_VIEW_APPROVED,
-    Permission.PROJECT_VIEW_ACTIVE,
-    Permission.PROJECT_CREATE,
-    Permission.PROJECT_UPDATE,
-    Permission.PROJECT_VIEW_ALL,
-    Permission.PROJECT_ASSIGN_LEADER,
     Permission.DEPT_VIEW_DASHBOARD,
-    Permission.DEPT_BUDGET_ALLOCATE,
-    Permission.PAYROLL_VIEW_SELF,
-    Permission.COMPANY_FUND_VIEW,
   ]),
   [RoleName.ACCOUNTANT]: new Set<Permission>([
     Permission.USER_PROFILE_VIEW,
@@ -366,14 +367,20 @@ const ROLE_PERMISSION_SET: Record<RoleName, Set<Permission>> = {
     Permission.WALLET_DEPOSIT,
     Permission.WALLET_WITHDRAW,
     Permission.WALLET_TRANSACTION_VIEW,
-    Permission.TRANSACTION_APPROVE_WITHDRAW,
+    Permission.PROJECT_VIEW_ACTIVE,
+    Permission.REQUEST_CREATE,
+    Permission.REQUEST_VIEW_SELF,
+    Permission.PAYROLL_VIEW_SELF,
+    Permission.PAYROLL_DOWNLOAD,
+    Permission.PROJECT_VIEW_ALL,
     Permission.REQUEST_VIEW_APPROVED,
     Permission.REQUEST_PAYOUT,
+    Permission.TRANSACTION_APPROVE_WITHDRAW,
+    Permission.WALLET_VIEW_ALL,
     Permission.PAYROLL_MANAGE,
     Permission.PAYROLL_EXECUTE,
     Permission.COMPANY_FUND_VIEW,
     Permission.COMPANY_FUND_TOPUP,
-    Permission.DASHBOARD_VIEW_GLOBAL,
   ]),
   [RoleName.CFO]: new Set<Permission>([
     Permission.USER_PROFILE_VIEW,
@@ -381,15 +388,24 @@ const ROLE_PERMISSION_SET: Record<RoleName, Set<Permission>> = {
     Permission.USER_PIN_UPDATE,
     Permission.NOTIFICATION_VIEW,
     Permission.WALLET_VIEW_SELF,
+    Permission.WALLET_DEPOSIT,
+    Permission.WALLET_WITHDRAW,
     Permission.WALLET_TRANSACTION_VIEW,
+    Permission.PROJECT_VIEW_ACTIVE,
+    Permission.REQUEST_CREATE,
+    Permission.REQUEST_VIEW_SELF,
+    Permission.PAYROLL_VIEW_SELF,
+    Permission.PAYROLL_DOWNLOAD,
+    Permission.PROJECT_VIEW_ALL,
+    Permission.REQUEST_VIEW_ALL,
     Permission.REQUEST_APPROVE_DEPT_TOPUP,
     Permission.REQUEST_REJECT,
-    Permission.REQUEST_VIEW_ALL,
-    Permission.REQUEST_VIEW_APPROVED,
+    Permission.TRANSACTION_APPROVE_WITHDRAW,
+    Permission.WALLET_VIEW_ALL,
     Permission.COMPANY_FUND_VIEW,
     Permission.COMPANY_FUND_TOPUP,
+    Permission.DEPT_BUDGET_ALLOCATE,
     Permission.DASHBOARD_VIEW_GLOBAL,
-    Permission.AUDIT_LOG_VIEW,
   ]),
   [RoleName.ADMIN]: new Set<Permission>([
     Permission.USER_PROFILE_VIEW,
@@ -451,7 +467,7 @@ export default function AdminRolesPage() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Vai trò hệ thống</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-100">
-            Ma trận quyền được định nghĩa theo nghiệp vụ IFMS. Trang này giúp kiểm tra nhanh phạm vi truy cập của từng role trước khi vận hành.
+            Ma trận quyền mặc định được đồng bộ với cấu hình khởi tạo backend IFMS. Đây là cấu hình nền để tham chiếu, không phản ánh các thay đổi quyền riêng đã lưu trực tiếp trong cơ sở dữ liệu.
           </p>
         </div>
       </section>
@@ -499,7 +515,7 @@ export default function AdminRolesPage() {
 
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 bg-blue-50/60 px-5 py-4">
-          <h2 className="text-base font-bold text-slate-900">Ma trận quyền theo nhóm chức năng</h2>
+          <h2 className="text-base font-bold text-slate-900">Ma trận quyền mặc định theo nhóm chức năng</h2>
           <p className="mt-1 text-sm text-slate-500">Dấu tích thể hiện role đang được cấp permission tương ứng.</p>
         </div>
 

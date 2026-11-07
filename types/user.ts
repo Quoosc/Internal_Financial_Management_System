@@ -27,7 +27,7 @@ export enum RoleName {
 }
 
 /**
- * Dynamic RBAC Permissions — 46 values.
+ * Dynamic RBAC Permissions — 47 values.
  * Định nghĩa cứng trong source code, Admin gán cho Role qua UI.
  * Khớp với Database.md Permission Matrix (v2.0 — NO Escalation).
  */
@@ -48,6 +48,7 @@ export enum Permission {
   WALLET_DEPOSIT = "WALLET_DEPOSIT",
   WALLET_WITHDRAW = "WALLET_WITHDRAW",
   WALLET_TRANSACTION_VIEW = "WALLET_TRANSACTION_VIEW",
+  WALLET_VIEW_ALL = "WALLET_VIEW_ALL",
   TRANSACTION_APPROVE_WITHDRAW = "TRANSACTION_APPROVE_WITHDRAW",
 
   // --- 3. Project Lifecycle ---

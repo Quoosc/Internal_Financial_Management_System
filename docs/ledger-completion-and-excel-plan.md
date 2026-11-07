@@ -1,5 +1,10 @@
 # IFMS — rà soát sổ cái và kế hoạch hoàn thiện nghiệp vụ, giao diện, Excel
 
+> **Kế hoạch P0–P6 đã được duyệt và đang triển khai từ 06/11/2026.** Trạng thái
+> từng gói, kết quả kiểm chứng mới và phần còn phụ thuộc hồ sơ lịch sử/UAT xem
+> tại [ledger-finalization-plan.md](ledger-finalization-plan.md). Các mốc phần
+> trăm bên dưới là lịch sử, không phải tỷ lệ hoàn thành hiện tại.
+
 > **Kiểm tra 05/11/2026:** bản sao DB thực tế từ V18 đã migrate tới V36 và được
 > dùng để chạy các luồng sổ cái, sao kê, quỹ, tạm ứng, hoàn chi, payroll và Excel.
 > Phát hiện/sửa F25–F30; xem [review mới nhất](ledger-implementation-review.md).

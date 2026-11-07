@@ -50,7 +50,15 @@ function derivedActionMeta(
   entityName: string
 ): { label: string; description: string; tone: AuditTone } {
   const entityMap = ENTITY_ACTION_LABEL[action];
-  const label = entityMap?.[entityName] ?? humanizeToken(`${action} ${entityName}`);
+  const genericVerb: Record<string, string> = {
+    INSERT: "Tạo mới",
+    UPDATE: "Cập nhật",
+    DELETE: "Xóa",
+  };
+  const label = entityMap?.[entityName]
+    ?? (genericVerb[action]
+      ? `${genericVerb[action]} ${entityLabel(entityName)}`
+      : humanizeToken(`${action} ${entityLabel(entityName)}`));
   const tone: AuditTone =
     action === "DELETE" ? "security" :
     action === "INSERT" ? "access" :
@@ -193,6 +201,28 @@ const ENTITY_LABELS: Record<string, string> = {
   wallets: "Ví nội bộ",
   transactions: "Giao dịch",
   requests: "Yêu cầu",
+  User: "người dùng",
+  UserProfile: "hồ sơ cá nhân",
+  Department: "phòng ban",
+  Project: "dự án",
+  ProjectPhase: "giai đoạn dự án",
+  ProjectMember: "thành viên dự án",
+  PhaseCategoryBudget: "ngân sách hạng mục",
+  ExpenseCategory: "hạng mục chi phí",
+  Request: "yêu cầu chi tiêu",
+  RequestHistory: "lịch sử yêu cầu",
+  WithdrawRequest: "yêu cầu rút tiền",
+  DepositLog: "giao dịch nạp tiền",
+  Wallet: "ví nội bộ",
+  Transaction: "giao dịch",
+  LedgerEntry: "bút toán sổ cái",
+  PayrollPeriod: "kỳ lương",
+  Payslip: "phiếu lương",
+  CompanyFund: "quỹ hệ thống",
+  SystemConfig: "cấu hình hệ thống",
+  Notification: "thông báo",
+  ExcelExportLog: "lịch sử xuất Excel",
+  AdvanceBalance: "số dư tạm ứng",
 };
 
 const FIELD_LABELS: Record<string, string> = {
@@ -244,6 +274,7 @@ function actionMeta(action: string, entityName?: string) {
 
 function humanizeToken(value: string): string {
   return value
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim()

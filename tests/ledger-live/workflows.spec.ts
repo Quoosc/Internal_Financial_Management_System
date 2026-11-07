@@ -7,6 +7,26 @@ type Auth={accessToken:string;refreshToken:string;user:unknown};
 function auth(role="ACCOUNTANT"):Auth{return JSON.parse(fs.readFileSync(authPath!,"utf8"))[role];}
 async function get(path:string,role="ACCOUNTANT") {const r=await fetch(`http://127.0.0.1:8080/api/v1${path}`,{headers:{Authorization:`Bearer ${auth(role).accessToken}`}});expect(r.status,path).toBe(200);return (await r.json()).data;}
 async function login(page:Page,role="ACCOUNTANT") {const a=auth(role);await page.context().addCookies([{name:"access_token",value:a.accessToken,url:"http://127.0.0.1:3100"}]);await page.addInitScript(a=>{localStorage.setItem("access_token",a.accessToken);localStorage.setItem("refresh_token",a.refreshToken);localStorage.setItem("user_info",JSON.stringify(a.user));},a);}
+for(const [role,path] of [
+ ["ADMIN","/admin/users"],
+ ["CFO","/cfo/system-fund"],
+ ["ACCOUNTANT","/accountant/ledger?tab=wallet"],
+ ["MANAGER","/manager/projects"],
+ ["TEAM_LEADER","/team-leader/projects"],
+ ["EMPLOYEE","/requests"],
+] as const) {
+ test(`${role} opens its financial page with the real API`,async({page})=>{
+  const pageErrors:string[]=[];const apiStatuses:number[]=[];
+  page.on("pageerror",error=>pageErrors.push(error.message));
+  page.on("response",response=>{if(response.url().includes("/api/v1/"))apiStatuses.push(response.status());});
+  await login(page,role);await page.goto(path);
+  await expect(page).not.toHaveURL(/\/login(?:\?|$)/);
+  await expect(page.getByRole("heading").first()).toBeVisible();
+  await expect.poll(()=>apiStatuses.length,{timeout:10000}).toBeGreaterThan(0);
+  expect(apiStatuses.filter(status=>status>=400),`${role} API statuses`).toEqual([]);
+  expect(pageErrors,`${role} browser errors`).toEqual([]);
+ });
+}
 for(const [kind,label,prefix] of [["REQUEST","Xem yêu cầu","/accountant/ledger/sources/requests/"],["PAYSLIP","Xem phiếu lương","/accountant/payslips/"]]) {
  test(`Wallet ${kind} opens the accountant source belonging to another employee`,async({page})=>{
   const a=auth() as Auth&{user:{id:number}};const list=await get("/accountant/ledger/wallet-transactions?limit=100");let tx;

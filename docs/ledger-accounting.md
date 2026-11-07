@@ -16,6 +16,18 @@
 > tìm mã/ngày/số tiền. 20 test backend + 12 browser qua, build production qua.
 > Xem [review mới nhất](ledger-implementation-review.md).
 
+> **Cập nhật hoàn thiện ngày 06/11/2026:** Trang kỳ kế toán nhận danh sách ngoại
+> lệ có mã, nguyên nhân, hướng xử lý, liên kết journal/nguồn và phân trang từ
+> API. Khi đóng kỳ backend khóa theo kỳ và chạy lại điều kiện kiểm tra trước khi
+> ghi đóng. Đối chiếu chi phí, sao kê và mở sổ khôi phục phạm vi từ URL; PIN,
+> chứng từ và xác nhận không được đưa vào URL. Kiểm kê database local cho thấy
+> V36, 24 giao dịch ví, 0 journal và 0 dòng sao kê; các khoản thiếu chứng từ
+> chưa được ghi bù. Xem [kiểm kê dữ liệu lịch sử](ledger-legacy-data-inventory-2026-11-06.md)
+> và [trạng thái P0–P6](ledger-finalization-plan.md). Kiểm thử browser fixture
+> không thay thế UAT đầu cuối nối trực tiếp backend cho cả sáu vai trò.
+> Hợp đồng API đóng kỳ được ghi tại
+> [IFMS/docs/project_2/ledger-api-contract.md](<../../../LẬP TRÌNH JAVA/IFMS/docs/project_2/ledger-api-contract.md>).
+
 > **Trạng thái 23/10/2026:** Màn hình sổ tài khoản nhận lọc nghiệp vụ, nhân viên,
 > dự án, phòng ban, giai đoạn và danh mục; trang Excel khôi phục bộ lọc từ URL.
 > Danh sách tạm ứng và ngân sách dùng phân trang từ server; bộ chọn tham chiếu

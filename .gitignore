@@ -52,6 +52,9 @@ docs/*
 !docs/ledger-accounting.md
 !docs/ledger-redesign-plan.md
 !docs/ledger-completion-and-excel-plan.md
+!docs/ledger-finalization-plan.md
+!docs/ledger-event-source-matrix.md
+!docs/ledger-legacy-data-inventory-2026-11-06.md
 logs/
 test-results/
 
