@@ -210,17 +210,16 @@ export default function TLApprovalsPage() {
 
         if (cancelled) return;
 
-        const rawItems = pickItems(res.data)
-          .map((item) => normalizeTLApprovalListItem(item));
-        const normalizedItems = rawItems.filter((item) => item.requester.id !== user?.id);
-        const hiddenSelfItems = rawItems.length - normalizedItems.length;
+        const normalizedItems = pickItems(res.data).map((item) =>
+          normalizeTLApprovalListItem(item),
+        );
 
         const apiTotal = Array.isArray(res.data)
           ? normalizedItems.length
-          : Math.max(0, res.data.total - hiddenSelfItems);
+          : res.data.total;
         const apiTotalPages = Array.isArray(res.data)
           ? Math.max(1, Math.ceil(apiTotal / PAGE_LIMIT))
-          : Math.max(1, Math.ceil(apiTotal / PAGE_LIMIT));
+          : res.data.totalPages;
 
         setItems(normalizedItems);
         setTotal(apiTotal);
@@ -417,6 +416,7 @@ export default function TLApprovalsPage() {
             const phaseLabel = item.phase.name ?? item.phase.phaseCode;
             const categoryLabel =
               item.category?.name ?? item.categoryName ?? "Chưa phân loại";
+            const isOwnRequest = item.requester.id === user?.id;
 
             return (
               <button
@@ -443,6 +443,11 @@ export default function TLApprovalsPage() {
                     >
                       {getStatusLabel(item.status)}
                     </span>
+                    {isOwnRequest && (
+                      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-semibold text-amber-700">
+                        Yêu cầu của bạn · không thể tự duyệt
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-3">

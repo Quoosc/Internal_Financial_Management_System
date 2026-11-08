@@ -32,8 +32,8 @@ export interface BaseEntity {
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;
-  page: number;      // 1-indexed
-  limit: number;
+  page: number;       // indexing varies by endpoint — check the specific API before relying on it
+  size: number;
   totalPages: number;
 }
 

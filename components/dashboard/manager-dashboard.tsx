@@ -145,7 +145,7 @@ export function ManagerDashboard() {
           >("/api/v1/manager/approvals?page=0&size=3"),
           api.get<
             PaginatedResponse<ManagerProjectListItem> | ManagerProjectListItem[]
-          >("/api/v1/manager/projects?page=0&size=4"),
+          >("/api/v1/manager/projects?page=1&limit=4"),
         ]);
 
         if (cancelled) return;

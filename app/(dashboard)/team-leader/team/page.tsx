@@ -194,7 +194,7 @@ export default function TLTeamPage() {
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Tổng thành viên" value={total.toLocaleString("vi-VN")} helper={`${members.length} đang hiển thị`} tone="indigo" />
-        <MetricCard label="Có dư nợ" value={String(debtMembers)} helper="Cần theo dõi hoàn ứng" tone="rose" />
+        <MetricCard label="Có dư nợ" value={String(debtMembers)} helper="Trên trang hiện tại, cần theo dõi hoàn ứng" tone="rose" />
         <MetricCard label="Chờ duyệt" value={String(pendingRequests)} helper="Tổng pending trên trang" tone="amber" />
         <MetricCard label="Dự án liên quan" value={String(projectCount)} helper="Từ danh sách hiện tại" tone="blue" />
       </section>

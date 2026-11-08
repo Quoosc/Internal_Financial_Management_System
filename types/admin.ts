@@ -49,10 +49,6 @@ export interface AdminApprovalDetailResponse {
   };
   companyFund?: {
     balance?: number;
-    availableBalance?: number;
-  };
-  systemFund?: {
-    totalBalance?: number;
   };
   timeline: RequestTimelineEntry[];
   createdAt: string;

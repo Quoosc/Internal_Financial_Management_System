@@ -8,6 +8,7 @@ import {
   ManagerApprovalFilterParams,
   ManagerApprovalListItem,
   PaginatedResponse,
+  ProjectStatus,
   RequestStatus,
   RequestType,
 } from "@/types";
@@ -31,6 +32,28 @@ function parsePage(value: string | null): number {
 
 function pickItems<T>(payload: PaginatedResponse<T> | T[]): T[] {
   return Array.isArray(payload) ? payload : payload.items;
+}
+
+/**
+ * Mirrors the backend's "Cấp vốn vượt ngân sách kế hoạch" guard in
+ * RequestServiceImpl#approveManagerRequest, which rejects when
+ *   availableBudget + totalSpent + amount > totalBudget
+ * (availableBudget + totalSpent = total funding ever allocated to the
+ * project to date, since every payout moves money from availableBudget
+ * into totalSpent without changing that sum; totalBudget is the
+ * project's planning ceiling, set independently).
+ *
+ * `totalSpent` isn't exposed on the approvals summary/detail DTOs, so we
+ * can't reproduce the check exactly here. Since totalSpent >= 0, using
+ *   amount > totalBudget - availableBudget
+ * is a conservative proxy: it never fires when the real check wouldn't
+ * (it only triggers when totalSpent is effectively 0), so it avoids the
+ * old bug of flagging virtually every top-up as "over budget" just
+ * because availableBudget is currently low. The backend remains the
+ * authoritative gate at approve time regardless.
+ */
+function isOverBudget(project: { totalBudget: number; availableBudget: number }, amount: number): boolean {
+  return amount > project.totalBudget - project.availableBudget;
 }
 
 export default function ManagerApprovalsPage() {
@@ -183,7 +206,7 @@ export default function ManagerApprovalsPage() {
 
   const filtered = Boolean(search);
   const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
-  const overBudgetCount = items.filter((item) => item.amount > item.project.availableBudget).length;
+  const overBudgetCount = items.filter((item) => isOverBudget(item.project, item.amount)).length;
   const uniqueRequesters = new Set(items.map((item) => item.requester.id)).size;
   const isApprovedTab = approvalTab === "approved";
   const tabLabel = isApprovedTab ? "đã duyệt" : "chờ duyệt";
@@ -298,7 +321,8 @@ export default function ManagerApprovalsPage() {
       ) : (
         <div className="space-y-3">
           {items.map((item) => {
-            const overBudget = item.amount > item.project.availableBudget;
+            const overBudget = isOverBudget(item.project, item.amount);
+            const projectInactive = item.project.status !== ProjectStatus.ACTIVE;
 
             return (
               <button
@@ -319,6 +343,11 @@ export default function ManagerApprovalsPage() {
                     }`}>
                       {item.status === RequestStatus.PAID ? "Đã duyệt" : "Chưa duyệt"}
                     </span>
+                    {projectInactive && (
+                      <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 font-semibold text-rose-700">
+                        Dự án không còn hoạt động
+                      </span>
+                    )}
                     <span className="font-mono font-semibold text-slate-600">
                       {item.requestCode}
                     </span>

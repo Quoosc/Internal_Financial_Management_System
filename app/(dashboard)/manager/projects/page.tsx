@@ -18,9 +18,6 @@ import { SideDrawer } from "@/components/ui/side-drawer";
 import { ExcelImportPanel } from "@/components/data-exchange/excel-import-panel";
 
 const PAGE_LIMIT = 9;
-type ManagerProjectViewItem = ManagerProjectListItem & {
-  teamLeaderName?: string | null;
-};
 
 function parsePage(value: string | null): number {
   const page = Number(value ?? "1");
@@ -105,18 +102,6 @@ function pickItems<T>(payload: PaginatedResponse<T> | T[]): T[] {
   return Array.isArray(payload) ? payload : payload.items;
 }
 
-function normalizeProject(
-  item: ManagerProjectListItem,
-): ManagerProjectViewItem {
-  const withLeader = item as ManagerProjectListItem & {
-    teamLeaderName?: string | null;
-  };
-  return {
-    ...item,
-    teamLeaderName: withLeader.teamLeaderName ?? null,
-  };
-}
-
 export default function ManagerProjectsPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -137,7 +122,7 @@ export default function ManagerProjectsPage() {
     [searchParams],
   );
 
-  const [items, setItems] = useState<ManagerProjectViewItem[]>([]);
+  const [items, setItems] = useState<ManagerProjectListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -256,7 +241,7 @@ export default function ManagerProjectsPage() {
 
         if (cancelled) return;
 
-        const normalized = pickItems(res.data).map(normalizeProject);
+        const normalized = pickItems(res.data);
         const apiTotal = Array.isArray(res.data)
           ? normalized.length
           : res.data.total;
@@ -343,8 +328,10 @@ export default function ManagerProjectsPage() {
         body,
       );
 
-      const created = normalizeProject(res.data);
-      created.teamLeaderName = created.teamLeaderName ?? selectedTlName;
+      const created: ManagerProjectListItem = {
+        ...res.data,
+        teamLeaderName: res.data.teamLeaderName ?? selectedTlName,
+      };
 
       setItems((prev) => [created, ...prev].slice(0, PAGE_LIMIT));
       setTotal((prev) => prev + 1);

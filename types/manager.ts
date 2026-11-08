@@ -5,6 +5,7 @@
 
 import type { RequestTimelineEntry, RequestStatus } from "./request";
 import type { ApprovalRequester } from "./team-leader";
+import type { ProjectStatus } from "./project";
 
 // --- Manager Approvals (Flow 2 — PROJECT_TOPUP) ---
 
@@ -14,6 +15,8 @@ export interface ManagerApprovalProject {
   projectCode: string;
   name: string;
   availableBudget: number;
+  totalBudget: number;
+  status: ProjectStatus;
 }
 
 /** GET /manager/approvals — response item */
@@ -42,9 +45,7 @@ export interface ManagerApprovalDetailResponse {
   requester: ApprovalRequester & {
     departmentName: string;
   };
-  project: ManagerApprovalProject & {
-    totalBudget: number;
-  };
+  project: ManagerApprovalProject;
   department: {
     id: number;
     name: string;
@@ -97,6 +98,8 @@ export interface ManagerProjectListItem {
   memberCount: number;
   currentPhaseId: number | null;
   currentPhaseName: string | null;
+  teamLeaderId: number | null;
+  teamLeaderName: string | null;
   createdAt: string;
 }
 
@@ -114,6 +117,7 @@ export interface ManagerDeptMemberListItem {
   status: string;
   pendingRequestsCount: number;
   debtBalance: number;
+  projectsCount: number;
 }
 
 /** GET /manager/department/members/:id — response */

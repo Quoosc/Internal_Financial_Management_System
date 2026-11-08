@@ -41,8 +41,7 @@ const BREADCRUMB_MAP: Record<string, string[]> = {
   "/admin/system-fund": ["Quản trị", "Quỹ hệ thống"],
   "/cfo/approvals": ["CFO", "Duyệt ngân sách"],
   "/cfo/system-fund": ["CFO", "Quỹ hệ thống"],
-  "/cfo/settings": ["CFO", "Cấu hình"],
-  "/cfo/audit-logs": ["CFO", "Nhật ký hệ thống"],
+  "/cfo/reconciliation": ["CFO", "Đối soát ngân hàng"],
 };
 
 const ROLE_LABELS: Partial<Record<RoleName, string>> = {

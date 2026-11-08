@@ -74,6 +74,7 @@ export function CfoDashboard() {
   const [dashboard, setDashboard] = useState<CfoDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDegraded, setIsDegraded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,6 +82,7 @@ export function CfoDashboard() {
     const loadDashboard = async () => {
       setLoading(true);
       setError(null);
+      setIsDegraded(false);
 
       try {
         const res = await api.get<CfoDashboardResponse>(
@@ -95,7 +97,7 @@ export function CfoDashboard() {
             api.get<CompanyFundResponse>("/api/v1/company-fund"),
             api.get<
               PaginatedResponse<AdminApprovalListItem> | AdminApprovalListItem[]
-            >("/api/v1/cfo/approvals?status=PENDING&page=1&limit=5"),
+            >("/api/v1/cfo/approvals?status=PENDING&page=0&size=5"),
           ]);
 
           if (cancelled) return;
@@ -108,6 +110,7 @@ export function CfoDashboard() {
             ? approvalsRes.data.length
             : approvalsRes.data.total;
 
+          setIsDegraded(true);
           setDashboard({
             companyFundBalance: fundRes.data.currentWalletBalance,
             pendingApprovalsCount: total,
@@ -249,8 +252,8 @@ export function CfoDashboard() {
             />
 
             <StatCard
-              title="Đã duyệt tháng này"
-              value={formatCurrency(dashboard?.monthlyApprovedAmount ?? 0)}
+              title={isDegraded ? "Đã duyệt tháng này (dữ liệu tạm thời)" : "Đã duyệt tháng này"}
+              value={isDegraded ? "—" : formatCurrency(dashboard?.monthlyApprovedAmount ?? 0)}
               href="/cfo/approvals"
               accent="text-emerald-700"
               icon={
@@ -271,8 +274,8 @@ export function CfoDashboard() {
             />
 
             <StatCard
-              title="Từ chối tháng này"
-              value={String(dashboard?.monthlyRejectedCount ?? 0)}
+              title={isDegraded ? "Từ chối tháng này (dữ liệu tạm thời)" : "Từ chối tháng này"}
+              value={isDegraded ? "—" : String(dashboard?.monthlyRejectedCount ?? 0)}
               href="/cfo/approvals"
               accent="text-slate-600"
               icon={

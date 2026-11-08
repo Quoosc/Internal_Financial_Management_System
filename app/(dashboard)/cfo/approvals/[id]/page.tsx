@@ -153,11 +153,7 @@ export default function CfoApprovalDetailPage({ params }: PageProps) {
     };
   }, [id, toast]);
 
-  const systemFundBalance =
-    request?.companyFund?.balance ??
-    request?.companyFund?.availableBalance ??
-    request?.systemFund?.totalBalance ??
-    0;
+  const systemFundBalance = request?.companyFund?.balance ?? 0;
   const deptCurrent = request?.department?.totalAvailableBalance ?? 0;
   const isPending = request?.status === RequestStatus.PENDING;
   const settledAmount = request?.approvedAmount ?? request?.amount ?? 0;
