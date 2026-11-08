@@ -40,7 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Local tooling (not for repo); only the ledger docs below are tracked from docs/
+# Local tooling (not for repo); track only the documentation listed below.
 .claude/
 .vscode/
 docs/
@@ -55,6 +55,8 @@ docs/*
 !docs/ledger-finalization-plan.md
 !docs/ledger-event-source-matrix.md
 !docs/ledger-legacy-data-inventory-2026-11-06.md
+!docs/ifms-ai-integration-architecture.md
+!docs/ifms-ai-upgrade-technical-report.md
 logs/
 test-results/
 
