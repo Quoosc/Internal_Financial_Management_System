@@ -15,6 +15,7 @@ import { formatCurrency } from "@/lib/format";
 import { KebabMenu } from "@/components/ui/kebab-menu";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { SideDrawer } from "@/components/ui/side-drawer";
+import { ExcelImportPanel } from "@/components/data-exchange/excel-import-panel";
 
 const PAGE_LIMIT = 10;
 
@@ -341,6 +342,11 @@ export default function AdminDepartmentsPage() {
           </div>
         </div>
       </section>
+
+      <details className="group">
+        <summary className="cursor-pointer rounded-2xl border border-blue-200 bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-50">Nhập danh sách phòng ban từ Excel</summary>
+        <div className="mt-3"><ExcelImportPanel datasetCode="departments" title="Nhập phòng ban" /></div>
+      </details>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Tổng phòng ban" value={String(total)} helper={`${items.length} đang hiển thị`} tone="blue" />

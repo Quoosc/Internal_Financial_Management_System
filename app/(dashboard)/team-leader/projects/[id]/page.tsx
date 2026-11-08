@@ -9,6 +9,7 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { SideDrawer } from "@/components/ui/side-drawer";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { MetricLabel } from "@/components/ui/metric-label";
+import { ExcelImportPanel } from "@/components/data-exchange/excel-import-panel";
 import {
   AddMemberBody,
   AvailableMemberResponse,
@@ -837,6 +838,15 @@ export default function TLProjectDetailPage({ params }: PageProps) {
           </div>
         </div>
       </section>
+
+      <details className="group">
+        <summary className="cursor-pointer rounded-2xl border border-blue-200 bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-50">Nhập dữ liệu dự án từ Excel</summary>
+        <div className="mt-3 grid gap-4">
+          <ExcelImportPanel datasetCode="phases" scope={project.id} title="Nhập giai đoạn" />
+          <ExcelImportPanel datasetCode="project-members" scope={project.id} title="Nhập thành viên" />
+          <ExcelImportPanel datasetCode="category-budgets" scope={project.id} title="Nhập hạn mức danh mục" />
+        </div>
+      </details>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label={<MetricLabel label="Hạn mức dự án" description="Mức ngân sách kế hoạch tối đa của dự án, không phải số tiền đã được cấp." />} value={formatCurrency(project.totalBudget)} helper="Ngân sách kế hoạch" tone="blue" />

@@ -5,13 +5,12 @@ import { use, useEffect, useMemo, useState } from "react";
 import { ApiError, api, downloadFile } from "@/lib/api-client";
 import { useToast } from "@/contexts/toast-context";
 import { formatCurrency, formatDateTime } from "@/lib/format";
-import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { ExcelImportPanel } from "@/components/data-exchange/excel-import-panel";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import {
   AutoNettingResponse,
   PayrollDetailResponse,
   PayrollEntry,
-  PayrollImportResponse,
   PayrollRunResponse,
   PayrollStatus,
   PayslipStatus,
@@ -53,23 +52,14 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
   const [period, setPeriod] = useState<PayrollDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [importResult, setImportResult] = useState<PayrollImportResponse | null>(null);
   const [nettingResult, setNettingResult] = useState<AutoNettingResponse | null>(null);
   const [runResult, setRunResult] = useState<PayrollRunResponse | null>(null);
 
   const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4>(1);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
   const [uploading, setUploading] = useState(false);
-  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [netting, setNetting] = useState(false);
   const [running, setRunning] = useState(false);
   const [showRunConfirm, setShowRunConfirm] = useState(false);
-  const [confirmState, setConfirmState] = useState<{
-    open: boolean;
-    message: string;
-    onConfirm: () => void;
-  }>({ open: false, message: "", onConfirm: () => {} });
 
   const [editingEntry, setEditingEntry] = useState<PayrollEntry | null>(null);
   const [baseSalary, setBaseSalary] = useState<number | null>(0);
@@ -310,11 +300,22 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {activeStep === 1 && <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900">Nhập bảng lương qua Excel</h2>
-        <p className="text-sm leading-6 text-slate-600">Tải mẫu đăng ký, xem trước các dòng và xác nhận toàn bộ lô tại trang Dữ liệu &amp; báo cáo. File không hợp lệ không xóa dữ liệu đang có; chỉ kỳ nháp được phép thay thế.</p>
-        <div className="flex flex-wrap gap-3"><Link href={`/data-exchange?dataset=payroll&scope=${id}`} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white">Mở trang dữ liệu lương</Link>{hasEntries && <button onClick={() => setActiveStep(2)} className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-blue-700">Xem bảng lương hiện có</button>}</div>
-      </section>}
+      {activeStep === 1 && (isCompleted ? <section className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">Kỳ lương đã hoàn tất. Dữ liệu đã chi không thể nhập lại.</section> : <div className="space-y-3">
+        <ExcelImportPanel
+          datasetCode="payroll"
+          scope={period.id}
+          title="Nhập bảng lương"
+          description="Chọn file Excel; hệ thống tự kiểm tra và hiển thị từng dòng. Sau khi xác nhận, toàn bộ phiếu lương nháp của kỳ này được thay bằng dữ liệu mới."
+          onImported={async () => {
+            const response = await api.get<PayrollDetailResponse>(`/api/v1/accountant/payroll/${period.id}`);
+            setPeriod(response.data);
+            setNettingResult(null);
+            setRunResult(null);
+            setActiveStep(2);
+          }}
+        />
+        {hasEntries && <button type="button" onClick={() => setActiveStep(2)} className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-blue-700">Xem bảng lương hiện có</button>}
+      </div>)}
 
       {activeStep === 2 && (
         <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-5 space-y-4">
@@ -586,12 +587,6 @@ export default function AccountantPayrollDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      <ConfirmModal
-        open={confirmState.open}
-        message={confirmState.message}
-        onConfirm={confirmState.onConfirm}
-        onCancel={() => setConfirmState((prev) => ({ ...prev, open: false }))}
-      />
     </div>
   );
 }

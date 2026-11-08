@@ -7,6 +7,7 @@ import { ApiError, api } from "@/lib/api-client";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { useToast } from "@/contexts/toast-context";
 import { useAuth } from "@/contexts/auth-context";
+import { ExcelImportPanel } from "@/components/data-exchange/excel-import-panel";
 import {
   RequestStatusBadge,
   RequestTypeBadge,
@@ -330,6 +331,11 @@ export default function RequestsPage() {
           </div>
         </div>
       </section>
+
+      {currentRole === RoleName.EMPLOYEE && <details className="group">
+        <summary className="cursor-pointer rounded-2xl border border-blue-200 bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-50">Nhập yêu cầu từ Excel</summary>
+        <div className="mt-3"><ExcelImportPanel datasetCode="requests" title="Nhập yêu cầu" /></div>
+      </details>}
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Tổng yêu cầu" value={totalCount.toLocaleString("vi-VN")} helper={`${paidCount} đã chi trả`} tone="blue" />

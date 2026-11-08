@@ -20,6 +20,7 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { TableRowSkeleton } from "@/components/ui/skeleton";
 import { KebabMenu } from "@/components/ui/kebab-menu";
 import { SideDrawer } from "@/components/ui/side-drawer";
+import { ExcelImportPanel } from "@/components/data-exchange/excel-import-panel";
 
 const PAGE_LIMIT = 10;
 
@@ -414,6 +415,11 @@ export default function AdminUsersPage() {
           </button>
         </div>
       </section>
+
+      <details className="group">
+        <summary className="cursor-pointer rounded-2xl border border-blue-200 bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-50">Nhập danh sách nhân sự từ Excel</summary>
+        <div className="mt-3"><ExcelImportPanel datasetCode="employees" title="Nhập nhân sự" /></div>
+      </details>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <MetricCard label="Tổng người dùng" value={total.toLocaleString("vi-VN")} tone="blue" />

@@ -15,6 +15,7 @@ import {
 import { formatCurrency, getBurnClass } from "@/lib/format";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { SideDrawer } from "@/components/ui/side-drawer";
+import { ExcelImportPanel } from "@/components/data-exchange/excel-import-panel";
 
 const PAGE_LIMIT = 9;
 type ManagerProjectViewItem = ManagerProjectListItem & {
@@ -384,6 +385,11 @@ export default function ManagerProjectsPage() {
           </div>
         </div>
       </section>
+
+      <details className="group">
+        <summary className="cursor-pointer rounded-2xl border border-blue-200 bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-50">Nhập dự án từ Excel</summary>
+        <div className="mt-3"><ExcelImportPanel datasetCode="projects" title="Nhập dự án" /></div>
+      </details>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Tổng dự án" value={total.toLocaleString("vi-VN")} helper={`${items.length} đang hiển thị`} tone="blue" />
