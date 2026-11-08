@@ -1,7 +1,5 @@
 # Báo cáo kỹ thuật: nâng cấp AI cho IFMS
 
-> **Mục đích:** trình bày với GVHD chức năng AI đang có, cách thay thế lời gọi Gemini và phần mô hình nhóm dự kiến huấn luyện.  
-> **Trạng thái:** đây là **kế hoạch**, chưa phải kết quả triển khai hay kết quả đo mô hình. Khảo sát dựa trên source backend IFMS và frontend financial-wallet-frontend.
 
 ## Tóm tắt trong một phút
 
@@ -79,6 +77,17 @@ flowchart TB
 
 **Ranh giới bắt buộc:** AI chỉ đọc, gợi ý và giải thích. Spring Boot xác nhận quyền, tính tiền, kiểm Excel, duyệt yêu cầu và ghi sổ. AI không có quyền tự giải ngân, sửa ví hoặc tạo bút toán.
 
+**Phạm vi hỏi đáp theo vai trò (đề xuất; khi code phải kiểm permission và đối tượng cụ thể):**
+
+| Vai trò | Dữ liệu chatbot được phép tra |
+|---|---|
+| Employee | Yêu cầu, ví, phiếu lương, tạm ứng của **chính mình** và hướng dẫn chung. |
+| Team Leader | Phần dữ liệu nhóm/dự án mà quyền hiện tại cho xem. |
+| Manager | Ngân sách và tổng hợp trong phạm vi quản lý đã được backend kiểm. |
+| Accountant | Chứng từ, giải ngân, giao dịch ví và sổ cái theo quyền kế toán. |
+| CFO | Báo cáo và ngân sách tổng hợp theo quyền được cấp. |
+| Admin | Hướng dẫn, cấu hình và tình trạng vận hành; **không mặc nhiên** có quyền đọc lương hay mọi số liệu tài chính. |
+
 ## 3. Kế hoạch cho từng chức năng
 
 ### A. Thay Gemini đọc chứng từ bằng OCR nội bộ
@@ -136,6 +145,19 @@ flowchart TB
 | **6** | Dự báo dòng tiền bằng ML | Chỉ khi có lịch sử thực đủ dài; dữ liệu demo không đủ để kết luận |
 
 **Phương án tối ưu cho đồ án:** ưu tiên **PhoBERT có dữ liệu gắn nhãn, mã train và kết quả so sánh**; thêm OCR nội bộ để giảm phụ thuộc Gemini; chatbot RAG làm bản có nguồn và phạm vi câu hỏi rõ. Không cần tự train LLM lớn. Chi phí API có thể giảm, nhưng máy chủ local vẫn tốn RAM/CPU/GPU và công vận hành; chưa ghi mức tiết kiệm khi chưa đo.
+
+## 6. Plan implement cụ thể để chuyển thành task code
+
+| Bước | Backend IFMS | AI service và dữ liệu | Frontend | Điều kiện nghiệm thu |
+|---|---|---|---|---|
+| **I. Tạo dữ liệu chuẩn** | Trích các yêu cầu đã được xác nhận, liên kết chứng từ và danh mục cuối; loại dữ liệu nhạy cảm không cần cho train. | Lập bộ ảnh vàng và bộ cặp khoản chi–danh mục có nhãn; tách train/validation/test, gắn phiên bản. | Chưa đổi luồng sử dụng. | Có số lượng mẫu theo danh mục, nguồn nhãn và tập test chưa dùng để train. |
+| **II. Gợi ý danh mục nội bộ** | Giữ endpoint gợi ý đang có; kiểm danh mục ứng viên theo phase, lưu model version và lựa chọn cuối của người dùng. | Train TF–IDF baseline, fine tune PhoBERT, phục vụ suy luận qua API nội bộ. | Hiện gợi ý, nguồn và nút sửa; tái sử dụng ở preview Excel của yêu cầu chi. | So với baseline/Gemini trên cùng tập; không gợi ý ID ngoài phase; AI lỗi vẫn chọn tay được. |
+| **III. Đọc chứng từ nội bộ** | Giữ kiểm MIME, quota, cache, cảnh báo; thêm provider OCR, API tra lại kết quả/cảnh báo theo request với quyền phù hợp. | PaddleOCR tiếng Việt + tách trường; trả giá trị, trạng thái không đọc được và model version. | Hiện ảnh gốc, trường đề xuất và chỗ người dùng xác nhận/sửa. | Đo từng trường trên cùng tập ảnh với Gemini; không tự duyệt chứng từ. |
+| **IV. Hỏi đáp** | Thêm endpoint hỏi đáp, các hàm đọc báo cáo có tham số cố định và kiểm quyền; số tiền lấy từ service nghiệp vụ. | Chỉ mục tài liệu đã duyệt có quyền/phiên bản; BGE-M3 + pgvector; Qwen chạy nội bộ nếu máy đáp ứng. | Ô trợ giúp tại yêu cầu, tạm ứng, Excel và sổ cái; hiện nguồn và link về bản ghi. | Câu hỏi ngoài phạm vi bị từ chối; số khớp báo cáo; không lộ dữ liệu khác quyền. |
+
+**Hợp đồng API dự kiến:** giữ `/api/v1/ai/receipts/extract` và endpoint gợi ý danh mục hiện có để giảm thay đổi frontend; bổ sung endpoint đọc kết quả/cảnh báo của yêu cầu và endpoint hỏi đáp. Spring Boot gọi AI service trong mạng nội bộ; browser không gọi thẳng model. Model train chạy **offline**, artifact được đánh phiên bản và chỉ phát hành sau khi qua bộ test. OCR/LLM lỗi thì form, nhập Excel và báo cáo vẫn dùng được theo luồng thủ công. Tác vụ OCR tốn thời gian có thể chuyển sang xử lý nền ở bước III; hiện endpoint quét đang trả kết quả đồng bộ.
+
+**Chưa chốt trước khi code:** số lượng và quyền sử dụng chứng từ thật; số nhãn sạch theo danh mục; máy demo có RAM/GPU đủ cho Qwen/BGE-M3 hay không; bộ tài liệu nghiệp vụ nào được duyệt để đưa vào RAG; permission chính xác cho từng hàm hỏi đáp. Nếu thiếu nhãn, nhóm chỉ có thể trình bày baseline và quá trình thu thập dữ liệu, chưa thể tuyên bố fine tuning đạt chất lượng. Nếu thiếu phần cứng, bản hỏi đáp đầu dùng tìm tài liệu và mẫu câu xác định thay cho câu sinh bởi Qwen.
 
 ## Kết luận
 

@@ -55,7 +55,6 @@ docs/*
 !docs/ledger-finalization-plan.md
 !docs/ledger-event-source-matrix.md
 !docs/ledger-legacy-data-inventory-2026-11-06.md
-!docs/ifms-ai-integration-architecture.md
 !docs/ifms-ai-upgrade-technical-report.md
 logs/
 test-results/
