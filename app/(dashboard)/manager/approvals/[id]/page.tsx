@@ -277,12 +277,9 @@ export default function ManagerApprovalDetailPage({ params }: PageProps) {
   }
 
   const overDeptBudget = request.amount > request.department.totalAvailableBalance;
-  // See isOverBudget() in manager/approvals/page.tsx for why this proxy
-  // (totalBudget - availableBudget) is used instead of the backend's exact
-  // availableBudget + totalSpent + amount > totalBudget check: totalSpent
-  // isn't exposed on this DTO, and this conservative proxy avoids false
-  // "over budget" warnings while the backend remains authoritative.
-  const overProjectBudget = request.amount > request.project.totalBudget - request.project.availableBudget;
+  // Mirrors exactly the backend's guard in RequestServiceImpl#approveManagerRequest.
+  const overProjectBudget =
+    request.project.availableBudget + request.project.totalSpent + request.amount > request.project.totalBudget;
   const projectInactive = request.project.status !== ProjectStatus.ACTIVE;
 
   const sortedTimeline = [...request.timeline].sort(

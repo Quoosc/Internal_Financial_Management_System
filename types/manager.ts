@@ -16,6 +16,7 @@ export interface ManagerApprovalProject {
   name: string;
   availableBudget: number;
   totalBudget: number;
+  totalSpent: number;
   status: ProjectStatus;
 }
 

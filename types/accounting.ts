@@ -220,6 +220,8 @@ export interface CompanyFundResponse {
   bankAccount: string;
   /** Current balance tracked by Wallet(COMPANY_FUND) — authoritative */
   currentWalletBalance: number;
+  /** HEALTHY / LOW / CRITICAL, computed server-side against SystemConfig thresholds */
+  fundHealth: "HEALTHY" | "LOW" | "CRITICAL";
   /** Last known external bank balance entered by Accountant */
   externalBankBalance: number;
   /** currentWalletBalance − externalBankBalance (expected = 0) */
