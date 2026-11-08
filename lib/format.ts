@@ -84,13 +84,6 @@ export function parseAmountInput(raw: string): string {
 
 export type FundHealth = "HEALTHY" | "LOW" | "CRITICAL";
 
-/** Classify company/system fund balance into a health tier. */
-export function getFundHealth(balance: number): FundHealth {
-  if (balance >= 500_000_000) return "HEALTHY";
-  if (balance >= 100_000_000) return "LOW";
-  return "CRITICAL";
-}
-
 /** Tailwind badge classes for fund health (inline badge pattern). */
 export function getFundHealthClass(health: FundHealth): string {
   switch (health) {

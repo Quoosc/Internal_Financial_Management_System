@@ -14,7 +14,7 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { ApiError, api } from "@/lib/api-client";
 import { getCashFlowAnalytics, PeriodKey } from "@/lib/api";
-import { formatCurrency, formatRelativeTime, getFundHealth, getFundHealthClass } from "@/lib/format";
+import { formatCurrency, formatRelativeTime, getFundHealthClass } from "@/lib/format";
 import {
   AccountantDashboardResponse,
   CashFlowPoint,
@@ -240,7 +240,7 @@ export function AccountantDashboard() {
   }, []);
 
   const fundBalance = dashboard?.systemFundBalance ?? 0;
-  const health = getFundHealth(fundBalance);
+  const health = dashboard?.fundHealth ?? "CRITICAL";
 
   const payrollStatus = useMemo(() => {
     if (latestPayroll) return latestPayroll.status;

@@ -11,7 +11,7 @@ import {
   PaginatedResponse,
   RequestType,
 } from "@/types";
-import { formatCurrency, formatDateTime, getFundHealth, getFundHealthClass } from "@/lib/format";
+import { formatCurrency, formatDateTime, getFundHealthClass } from "@/lib/format";
 import { CardListSkeleton } from "@/components/ui/skeleton";
 import { isAccountantQueueStatus } from "@/lib/adapters/request-status";
 import { toApiPage } from "@/lib/adapters/pagination";
@@ -98,6 +98,7 @@ export default function AccountantDisbursementsPage() {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [systemFundBalance, setSystemFundBalance] = useState(0);
+  const [fundHealth, setFundHealth] = useState<"HEALTHY" | "LOW" | "CRITICAL">("CRITICAL");
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState(search);
 
@@ -192,12 +193,14 @@ export default function AccountantDisbursementsPage() {
         setTotal(apiTotal);
         setTotalPages(apiTotalPages);
         setSystemFundBalance(fundRes.data.currentWalletBalance);
+        setFundHealth(fundRes.data.fundHealth);
       } catch (err) {
         if (cancelled) return;
         setItems([]);
         setTotal(0);
         setTotalPages(1);
         setSystemFundBalance(0);
+        setFundHealth("CRITICAL");
         toast.error(err instanceof ApiError ? err.apiMessage : "Không thể tải danh sách giải ngân.");
       } finally {
         if (!cancelled) setLoading(false);
@@ -211,7 +214,6 @@ export default function AccountantDisbursementsPage() {
     };
   }, [goToPage, page, search, type, toast]);
 
-  const fundHealth = getFundHealth(systemFundBalance);
   const pageApprovedTotal = useMemo(
     () => items.reduce((sum, item) => sum + item.approvedAmount, 0),
     [items],

@@ -65,6 +65,7 @@ export interface ManagerDashboardResponse {
 /** GET /dashboard/accountant — response */
 export interface AccountantDashboardResponse {
   systemFundBalance: number;
+  fundHealth: "HEALTHY" | "LOW" | "CRITICAL";
   pendingDisbursementsCount: number;
   monthlyInflow: number;
   monthlyOutflow: number;
@@ -79,6 +80,7 @@ export interface AccountantDashboardResponse {
 /** GET /dashboard/cfo — response */
 export interface CfoDashboardResponse {
   companyFundBalance: number;
+  fundHealth: "HEALTHY" | "LOW" | "CRITICAL";
   pendingApprovalsCount: number;
   monthlyApprovedAmount: number;
   monthlyRejectedCount: number;

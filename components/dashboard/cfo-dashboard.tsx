@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { ApiError, api } from "@/lib/api-client";
-import { formatCurrency, formatRelativeTime, getFundHealth, getFundHealthStyle } from "@/lib/format";
+import { formatCurrency, formatRelativeTime, getFundHealthStyle } from "@/lib/format";
 import {
   AdminApprovalListItem,
   CfoDashboardResponse,
@@ -113,6 +113,7 @@ export function CfoDashboard() {
           setIsDegraded(true);
           setDashboard({
             companyFundBalance: fundRes.data.currentWalletBalance,
+            fundHealth: fundRes.data.fundHealth,
             pendingApprovalsCount: total,
             monthlyApprovedAmount: 0,
             monthlyRejectedCount: 0,
@@ -162,8 +163,8 @@ export function CfoDashboard() {
   );
 
   const health = useMemo(
-    () => getFundHealthStyle(getFundHealth(dashboard?.companyFundBalance ?? 0)),
-    [dashboard?.companyFundBalance],
+    () => getFundHealthStyle(dashboard?.fundHealth ?? "CRITICAL"),
+    [dashboard?.fundHealth],
   );
 
   return (

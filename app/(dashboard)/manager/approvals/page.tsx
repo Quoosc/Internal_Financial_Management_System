@@ -35,25 +35,15 @@ function pickItems<T>(payload: PaginatedResponse<T> | T[]): T[] {
 }
 
 /**
- * Mirrors the backend's "Cấp vốn vượt ngân sách kế hoạch" guard in
+ * Mirrors exactly the backend's "Cấp vốn vượt ngân sách kế hoạch" guard in
  * RequestServiceImpl#approveManagerRequest, which rejects when
  *   availableBudget + totalSpent + amount > totalBudget
- * (availableBudget + totalSpent = total funding ever allocated to the
- * project to date, since every payout moves money from availableBudget
- * into totalSpent without changing that sum; totalBudget is the
- * project's planning ceiling, set independently).
- *
- * `totalSpent` isn't exposed on the approvals summary/detail DTOs, so we
- * can't reproduce the check exactly here. Since totalSpent >= 0, using
- *   amount > totalBudget - availableBudget
- * is a conservative proxy: it never fires when the real check wouldn't
- * (it only triggers when totalSpent is effectively 0), so it avoids the
- * old bug of flagging virtually every top-up as "over budget" just
- * because availableBudget is currently low. The backend remains the
- * authoritative gate at approve time regardless.
  */
-function isOverBudget(project: { totalBudget: number; availableBudget: number }, amount: number): boolean {
-  return amount > project.totalBudget - project.availableBudget;
+function isOverBudget(
+  project: { totalBudget: number; availableBudget: number; totalSpent: number },
+  amount: number,
+): boolean {
+  return project.availableBudget + project.totalSpent + amount > project.totalBudget;
 }
 
 export default function ManagerApprovalsPage() {

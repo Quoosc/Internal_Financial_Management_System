@@ -135,6 +135,7 @@ export function TeamLeaderDashboard() {
   const [approvals, setApprovals] = useState<TLApprovalListItem[]>([]);
   const [projects, setProjects] = useState<TLProjectListItem[]>([]);
   const [pendingTotal, setPendingTotal] = useState(0);
+  const [pendingAmount, setPendingAmount] = useState(0);
   const [projectsTotal, setProjectsTotal] = useState(0);
   const [activeProjectsTotal, setActiveProjectsTotal] = useState(0);
   const [membersTotal, setMembersTotal] = useState(0);
@@ -151,7 +152,7 @@ export function TeamLeaderDashboard() {
       void fetchWallet();
 
       try {
-        const [approvalRes, projectRes, activeProjectRes, memberRes] =
+        const [approvalRes, projectRes, activeProjectRes, memberRes, pendingAmountRes] =
           await Promise.all([
             api.get<PaginatedResponse<unknown> | unknown[]>(
               "/api/v1/team-leader/approvals?page=0&size=3&status=PENDING",
@@ -164,6 +165,9 @@ export function TeamLeaderDashboard() {
             ),
             api.get<PaginatedResponse<unknown> | unknown[]>(
               "/api/v1/team-leader/team-members?page=1&limit=1",
+            ),
+            api.get<{ pendingAmount: number }>(
+              "/api/v1/team-leader/approvals/pending-amount",
             ),
           ]);
 
@@ -196,6 +200,7 @@ export function TeamLeaderDashboard() {
             ? pickItems(memberRes.data).length
             : memberRes.data.total,
         );
+        setPendingAmount(pendingAmountRes.data.pendingAmount ?? 0);
       } catch (err) {
         if (cancelled) return;
 
@@ -205,6 +210,7 @@ export function TeamLeaderDashboard() {
         setProjectsTotal(0);
         setActiveProjectsTotal(0);
         setMembersTotal(0);
+        setPendingAmount(0);
 
         if (err instanceof ApiError) {
           setError(err.apiMessage);
@@ -222,11 +228,6 @@ export function TeamLeaderDashboard() {
       cancelled = true;
     };
   }, [fetchWallet]);
-
-  const pendingAmount = useMemo(
-    () => approvals.reduce((sum, item) => sum + item.amount, 0),
-    [approvals],
-  );
 
   const todayLabel = useMemo(
     () =>
