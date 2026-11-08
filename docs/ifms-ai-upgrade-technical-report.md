@@ -28,6 +28,8 @@ Trong source hiện tại, **Gemini là nhà cung cấp AI duy nhất được x
 
 Backend có cấu hình Gemini, timeout, model dự phòng, giới hạn lượt/người/ngày và cache theo tệp. Khi AI không khả dụng, nhân viên vẫn nhập tay. **Không thể xác nhận model Gemini, tier hoặc chi phí đang chạy thực tế chỉ bằng cấu hình mặc định trong source.**
 
+**Ví dụ luồng hiện tại:** nhân viên nộp hóa đơn 850.000 đ cho một khoản hoàn chi. Gemini đọc ảnh và trả số tiền, ngày, nhà cung cấp; frontend đưa các giá trị đó vào ô còn trống. Nếu nhân viên sửa thành 800.000 đ, hệ thống không tự ghi đè sửa đổi của họ. Sau khi tạo yêu cầu, backend đối chiếu số tiền nhập với chứng từ đã liên kết và lưu cảnh báo chênh lệch nếu vượt ngưỡng. **Cảnh báo là phép kiểm của backend; Gemini chỉ cung cấp dữ liệu đầu vào.** Số tiền ở đây chỉ là ví dụ minh họa, không phải kết quả kiểm thử của hệ thống.
+
 ### Đầu ra AI được dùng thế nào?
 
 - Form lấy trường đã đọc để **gợi ý** số tiền, ngày, tiêu đề và mô tả; người dùng sửa thì AI không ghi đè.
@@ -104,6 +106,8 @@ flowchart TB
 - **Thực hiện:** thu thập/gắn nhãn → chuẩn hóa và tách từ tiếng Việt → chia train/validation/test theo yêu cầu gốc để tránh cùng hóa đơn xuất hiện ở hai tập → train baseline → fine tune PhoBERT → so sánh → đưa model có phiên bản vào API gợi ý hiện tại. Người dùng vẫn xác nhận và có thể sửa đề xuất.
 - **Đánh giá:** top-1/top-3 danh mục đúng, kết quả theo dự án/danh mục mới, tỷ lệ không gợi ý khi chưa chắc, độ trễ; so với Gemini và baseline trên cùng tập test. **Khả thi:** đây là trọng tâm đồ án nếu có đủ nhãn sạch; fine tuning cần thêm thời gian/GPU và có thể thua baseline khi dữ liệu ít. [Model card PhoBERT](https://huggingface.co/vinai/phobert-base), [hướng dẫn fine tuning](https://huggingface.co/docs/transformers/training).
 
+**Ví dụ một mẫu train (minh họa, chưa phải dữ liệu thật):** mô tả “mua ổ cứng để kiểm thử dự án ERP” ghép với danh mục “Thiết bị và phần mềm” → nhãn **phù hợp**; ghép cùng khoản chi đó với “Công tác phí” → nhãn **không phù hợp**. Khi dự đoán, backend đưa các danh mục còn hiệu lực của giai đoạn cho model chấm điểm, sắp xếp và cho phép chọn thủ công. Nhóm cần giữ lại **khoản chi gốc, danh mục cuối cùng do người kiểm tra xác nhận và phiên bản danh mục** để có thể giải thích vì sao một mẫu được gắn nhãn như vậy.
+
 ### C. Chatbot RAG trả lời những câu hỏi nào?
 
 **Câu hỏi về quy trình/tài liệu**, ví dụ: “Tạm ứng khác hoàn chi thế nào?”, “Quyết toán cần chứng từ gì?”, “Vì sao file Excel bị từ chối?”, “Bút toán kế toán khác giao dịch ví ở điểm nào?”. Chỉ dùng **tài liệu IFMS đã duyệt**, loại hoặc đánh dấu rõ tài liệu đồ án 1 đã lỗi thời.
@@ -114,6 +118,15 @@ flowchart TB
 - **Đánh giá:** tìm đúng nguồn, trả lời đúng, có dẫn nguồn, từ chối khi không có tài liệu, không lộ dữ liệu khác quyền, thời gian/RAM. **Khả thi:** tra cứu tài liệu có nguồn làm được trước; chatbot sinh câu trả lời local phụ thuộc máy và chất lượng tiếng Việt. Nếu Qwen không đạt, hiển thị đoạn nguồn và câu trả lời theo mẫu. [RAG và fine tuning là hai cách khác nhau](https://docs.aws.amazon.com/prescriptive-guidance/latest/retrieval-augmented-generation-options/rag-vs-fine-tuning.html).
 
 **Câu hỏi về số liệu mới nhất**, ví dụ “Tôi còn phải quyết toán bao nhiêu?”, “Giai đoạn này còn bao nhiêu ngân sách?”, “Khoản chi này đã chuyển ví và ghi sổ chưa?” **không lấy số từ RAG**. Qwen chỉ chọn một hàm báo cáo được phép; Spring Boot kiểm quyền và tính số, trả kỳ và link bản ghi nguồn; Qwen diễn đạt. Không cho AI viết SQL tự do. Nghiệm thu bằng cách so số tiền **khớp tuyệt đối** màn báo cáo/API cùng bộ lọc và thử câu hỏi vượt quyền.
+
+| Người dùng hỏi | Nguồn trả lời đúng | Màn hình/dẫn chứng cần hiện |
+|---|---|---|
+| “Chi phí tự bỏ tiền ra có cần hóa đơn không?” | Đoạn quy trình EXPENSE đã duyệt trong kho RAG. | Tên tài liệu, phiên bản và link đến mục tương ứng. |
+| “Vì sao dòng 12 của file yêu cầu bị lỗi?” | Mã lỗi từ bộ kiểm Excel + hướng dẫn của dataset, không để Qwen đoán lỗi. | Số dòng, cột, quy tắc sai và cách sửa. |
+| “Tôi còn tạm ứng nào chưa quyết toán?” | API tạm ứng lọc theo chính tài khoản đang đăng nhập. | Mã khoản tạm ứng, số còn lại, link chi tiết và thời điểm lấy số. |
+| “Bút toán này đã chuyển tiền chưa?” | API truy vết yêu cầu → giao dịch ví → bút toán kế toán theo quyền. | Trạng thái từng bước và link đến giao dịch/bút toán gốc. |
+
+Nếu câu hỏi vừa cần **quy trình** vừa cần **số liệu**, chatbot lấy hai nguồn riêng rồi nói rõ phần nào là quy định chung, phần nào là trạng thái hiện tại. Nếu không tìm được căn cứ hoặc người hỏi không có quyền, chatbot trả lời rằng không thể xác nhận thay vì suy đoán.
 
 ### D. Excel dùng AI ở đâu?
 
@@ -158,6 +171,15 @@ flowchart TB
 **Hợp đồng API dự kiến:** giữ `/api/v1/ai/receipts/extract` và endpoint gợi ý danh mục hiện có để giảm thay đổi frontend; bổ sung endpoint đọc kết quả/cảnh báo của yêu cầu và endpoint hỏi đáp. Spring Boot gọi AI service trong mạng nội bộ; browser không gọi thẳng model. Model train chạy **offline**, artifact được đánh phiên bản và chỉ phát hành sau khi qua bộ test. OCR/LLM lỗi thì form, nhập Excel và báo cáo vẫn dùng được theo luồng thủ công. Tác vụ OCR tốn thời gian có thể chuyển sang xử lý nền ở bước III; hiện endpoint quét đang trả kết quả đồng bộ.
 
 **Chưa chốt trước khi code:** số lượng và quyền sử dụng chứng từ thật; số nhãn sạch theo danh mục; máy demo có RAM/GPU đủ cho Qwen/BGE-M3 hay không; bộ tài liệu nghiệp vụ nào được duyệt để đưa vào RAG; permission chính xác cho từng hàm hỏi đáp. Nếu thiếu nhãn, nhóm chỉ có thể trình bày baseline và quá trình thu thập dữ liệu, chưa thể tuyên bố fine tuning đạt chất lượng. Nếu thiếu phần cứng, bản hỏi đáp đầu dùng tìm tài liệu và mẫu câu xác định thay cho câu sinh bởi Qwen.
+
+**Kịch bản demo nghiệm thu đề xuất:**
+
+1. Nhân viên tải một chứng từ mẫu có đáp án đã ghi trước; đối chiếu Gemini hiện tại và PaddleOCR đề xuất trên **cùng tệp**, rồi sửa một trường OCR đọc sai để chứng minh người dùng vẫn kiểm soát form.
+2. Chọn một khoản hoàn chi và giai đoạn có nhiều danh mục; hiển thị gợi ý của baseline, PhoBERT và lựa chọn cuối của người dùng. Lặp lại với một dòng Excel yêu cầu chi để chứng minh **cùng một model** được tái sử dụng.
+3. Hỏi chatbot một câu về quy trình quyết toán; mở link nguồn. Hỏi tiếp khoản tạm ứng còn lại; mở API/màn chi tiết làm căn cứ cho con số.
+4. Đổi sang vai trò không có quyền, hỏi cùng khoản tạm ứng hoặc dữ liệu lương; hệ thống phải từ chối. Tắt AI service và thử lại form/Excel để chứng minh nghiệp vụ chính vẫn hoạt động.
+
+**Bằng chứng nhóm cần nộp kèm khi hoàn thành:** bộ dữ liệu có nhãn và quy tắc chọn mẫu (đã xử lý thông tin nhạy cảm), mã train, model artifact có phiên bản, bảng so sánh trên tập test độc lập, ma trận lỗi thường gặp, log thời gian/chi phí trước–sau, và video/ảnh màn hình các kịch bản trên. Không lấy số liệu demo tự sinh để khẳng định hiệu quả trên chứng từ doanh nghiệp thật.
 
 ## Kết luận
 
