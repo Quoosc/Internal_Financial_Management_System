@@ -5,6 +5,7 @@ import { use, useEffect, useMemo, useState } from "react";
 import { ApiError, api } from "@/lib/api-client";
 
 import { formatCurrency, formatDateTime } from "@/lib/format";
+import { ledgerReturnLabel, safeLedgerReturnTo, withLedgerReturnTo } from "@/lib/ledger-navigation";
 import {
   AccountantTransactionDetailResponse,
   ReferenceType,
@@ -133,11 +134,16 @@ function getReferenceLink(txn: AccountantTransactionDetailResponse): { label: st
 
 export default function AccountantLedgerDetailPage({ params }: PageProps) {
   const { id } = use(params);
+  const [returnTo, setReturnTo] = useState("/accountant/ledger?tab=wallet&page=1");
   const [error,setError]=useState("");
   const [reload,setReload]=useState(0);
 
   const [txn, setTxn]       = useState<AccountantTransactionDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setReturnTo(safeLedgerReturnTo(new URLSearchParams(window.location.search).get("returnTo")));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -162,10 +168,11 @@ export default function AccountantLedgerDetailPage({ params }: PageProps) {
   }, [id, reload]);
 
   const refLink = useMemo(() => (txn ? getReferenceLink(txn) : null), [txn]);
+  const currentDetail = withLedgerReturnTo(`/accountant/ledger/${id}`, returnTo);
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
       <section className="overflow-hidden rounded-3xl border border-blue-200 bg-linear-to-br from-blue-700 via-blue-600 to-cyan-600 text-white shadow-xl shadow-blue-900/15">
         <div className="relative p-6 sm:p-8">
           <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
@@ -185,11 +192,11 @@ export default function AccountantLedgerDetailPage({ params }: PageProps) {
     );
   }
 
-  if(error)return <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-sm text-rose-800">{error}<button className="ml-4 underline" onClick={()=>setReload(n=>n+1)}>Thử lại</button></div>;
+  if(error)return <div role="alert" className="mx-auto w-full max-w-6xl rounded-2xl border border-rose-200 bg-rose-50 p-8 text-sm text-rose-800">{error}<button className="ml-4 underline" onClick={()=>setReload(n=>n+1)}>Thử lại</button></div>;
   if (!txn) {
     return (
-      <div className="space-y-4">
-        <Link href="/accountant/ledger" className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900">
+      <div className="mx-auto w-full max-w-6xl space-y-4">
+        <Link href={returnTo} className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
           </svg>
@@ -203,7 +210,11 @@ export default function AccountantLedgerDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-6 pb-8">
+      <nav aria-label="Đường dẫn sổ cái" className="flex flex-wrap items-center justify-between gap-3 text-sm">
+        <div className="flex items-center gap-2 text-slate-500"><Link href={returnTo} className="font-semibold text-emerald-700 hover:underline">{ledgerReturnLabel(returnTo)}</Link><span>/</span><span className="font-mono text-slate-700">{txn.transactionCode}</span></div>
+        <Link href={returnTo} className="rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50">← Quay lại màn hình trước</Link>
+      </nav>
       <section className="overflow-hidden rounded-3xl border border-blue-200 bg-linear-to-br from-blue-700 via-blue-600 to-cyan-600 text-white shadow-xl shadow-blue-900/15">
         <div className="relative p-6 sm:p-8">
           <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
@@ -215,13 +226,6 @@ export default function AccountantLedgerDetailPage({ params }: PageProps) {
           </div>
         </div>
       </section>
-
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Link href="/accountant/ledger" className="hover:text-slate-900 transition-colors">Sổ cái</Link>
-        <span>/</span>
-        <span className="text-slate-600 font-mono">{txn.transactionCode}</span>
-      </div>
 
       {/* Immutable notice */}
       <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-600 text-sm">
@@ -245,17 +249,14 @@ export default function AccountantLedgerDetailPage({ params }: PageProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <InfoCard
             label="Số tiền"
             value={formatCurrency(txn.amount)}
             tone={txn.amount > 0 ? "text-emerald-700" : "text-rose-700"}
           />
-          <InfoCard label="Số dư sau ở ví liên quan" value={txn.balanceAfter == null || !Number.isFinite(txn.balanceAfter) ? "—" : formatCurrency(txn.balanceAfter)} />
-          <InfoCard
-            label="Ví liên quan"
-            value={formatOwnerLabel(txn.walletOwnerType, txn.walletOwnerId, txn.walletOwnerName)}
-          />
+          <InfoCard label="Ví có biến động" value={`${txn.ledgerEntries.length} dòng ví`} />
+          <InfoCard label="Nguồn nghiệp vụ" value={getReferenceTypeLabel(txn.referenceType)} />
           <InfoCard label="Thời gian"  value={formatDateTime(txn.createdAt)} />
         </div>
 
@@ -286,7 +287,7 @@ export default function AccountantLedgerDetailPage({ params }: PageProps) {
 
           {refLink?.href ? (
             <Link
-              href={refLink.href}
+              href={withLedgerReturnTo(refLink.href, currentDetail)}
               className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-slate-200 bg-white text-blue-700 hover:text-blue-600 text-sm"
             >
               {refLink.label}
@@ -304,6 +305,14 @@ export default function AccountantLedgerDetailPage({ params }: PageProps) {
       {txn.ledgerEntries.length > 0 && (
         <div className="rounded-3xl border border-slate-200 bg-white shadow-sm p-5 space-y-4">
           <div><h2 className="text-lg font-semibold text-slate-900">Biến động số dư các ví</h2><p className="mt-1 text-xs text-slate-500">Các dòng dưới đây cho biết số dư từng ví tăng hoặc giảm; bút toán theo tài khoản kế toán được xem riêng.</p></div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {txn.ledgerEntries.map((entry) => <div key={entry.id} className={`rounded-2xl border p-4 ${entry.direction === TransactionDirection.CREDIT ? "border-emerald-200 bg-emerald-50/70" : "border-rose-200 bg-rose-50/70"}`}>
+              <p className={`text-xs font-bold uppercase tracking-wide ${entry.direction === TransactionDirection.CREDIT ? "text-emerald-700" : "text-rose-700"}`}>{entry.direction === TransactionDirection.CREDIT ? "Ví nhận tiền · tăng" : "Ví chuyển tiền · giảm"}</p>
+              <p className="mt-2 text-sm font-semibold text-slate-900">{formatOwnerLabel(entry.walletOwnerType, entry.walletOwnerId, entry.walletOwnerName)}</p>
+              <div className="mt-3 flex flex-wrap items-end justify-between gap-2"><strong className={`text-lg ${entry.direction === TransactionDirection.CREDIT ? "text-emerald-700" : "text-rose-700"}`}>{entry.direction === TransactionDirection.CREDIT ? "+" : "−"}{formatCurrency(entry.amount)}</strong><span className="text-xs text-slate-600">Số dư sau: <strong className="text-slate-900">{entry.balanceAfter == null || !Number.isFinite(entry.balanceAfter) ? "Chưa có" : formatCurrency(entry.balanceAfter)}</strong></span></div>
+            </div>)}
+          </div>
 
           <div className="rounded-2xl border border-slate-200 overflow-x-auto">
             <table className="w-full min-w-[700px]">
@@ -346,11 +355,11 @@ export default function AccountantLedgerDetailPage({ params }: PageProps) {
 
       <section className="rounded-3xl border border-slate-200 bg-white shadow-sm p-5 space-y-3">
         <div><h2 className="text-lg font-semibold text-slate-900">Bút toán kế toán liên quan</h2><p className="mt-1 text-xs text-slate-500">Một giao dịch tiền có thể gắn với một hoặc nhiều bước ghi nhận kế toán.</p></div>
-        {txn.accountingJournalIds?.length ? <div className="flex flex-wrap gap-2">{txn.accountingJournalIds.map((journalId) => <Link key={journalId} href={`/accountant/ledger/journals/${journalId}`} className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100">Mở bút toán #{journalId}</Link>)}</div> : <p className="rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">Giao dịch này chưa có bút toán kế toán liên kết. Có thể đây là giao dịch chỉ theo dõi ở sổ ví (như nạp/rút ví cá nhân) hoặc là giao dịch lịch sử chưa đủ chứng từ để lập bút toán; cần kiểm tra loại nghiệp vụ và hồ sơ trước khi kết luận đã được hạch toán.</p>}
+        {txn.accountingJournalIds?.length ? <div className="flex flex-wrap gap-2">{txn.accountingJournalIds.map((journalId) => <Link key={journalId} href={withLedgerReturnTo(`/accountant/ledger/journals/${journalId}`, currentDetail)} className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-100">Xem bút toán #{journalId} →</Link>)}</div> : <p className="rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">Giao dịch này chưa có bút toán kế toán liên kết. Có thể đây là giao dịch chỉ theo dõi ở sổ ví (như nạp/rút ví cá nhân) hoặc là giao dịch lịch sử chưa đủ chứng từ để lập bút toán; cần kiểm tra loại nghiệp vụ và hồ sơ trước khi kết luận đã được hạch toán.</p>}
       </section>
 
       <Link
-        href="/accountant/ledger"
+        href={returnTo}
         className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl border border-slate-200 bg-white text-slate-900 hover:bg-blue-50 text-sm"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

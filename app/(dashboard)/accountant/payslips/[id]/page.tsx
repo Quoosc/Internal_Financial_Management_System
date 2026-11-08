@@ -93,7 +93,7 @@ export default function AccountantPayslipDetailPage({ params }: PageProps) {
   const deductionRate = totalEarnings > 0 ? Math.round((totalDeduction / totalEarnings) * 100) : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-6 pb-8">
       <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
         <Link href="/accountant/payroll" className="font-medium hover:text-blue-700 transition-colors">
           Bảng lương

@@ -20,6 +20,7 @@ export function JournalActions({ journal }: { journal: AccountingJournalDetail }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   if (journal.eventType === "REVERSAL" || journal.eventType === "OPENING_BALANCE") return null;
+  if (journal.reversalJournalId) return <p className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">Nghiệp vụ này đã được đảo. Xem bút toán đảo ở mục “Liên kết kiểm tra chéo” phía trên.</p>;
   const start = async (mode: "reverse" | "replace") => {
     setOpen(mode); setReason(""); setPin(""); setError(""); setBankId(""); setEvidence("");
     if (mode === "replace") {
@@ -54,9 +55,9 @@ export function JournalActions({ journal }: { journal: AccountingJournalDetail }
     finally { setBusy(false); }
   };
   return <>
-    <div className="flex flex-wrap gap-2"><button type="button" onClick={() => void start("reverse")} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700">Đảo toàn phần nghiệp vụ</button>
+    <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-4"><h2 className="text-sm font-bold text-slate-900">Sửa sai nghiệp vụ đã ghi</h2><p className="mt-1 text-xs leading-5 text-slate-700">Chỉ dùng khi nghiệp vụ gốc có sai sót cần hủy toàn bộ. Hệ thống giữ bản gốc, tạo bút toán đảo và xử lý các ảnh hưởng liên quan sau khi kiểm tra điều kiện, lý do và PIN.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => void start("reverse")} className="rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100">Đảo toàn phần nghiệp vụ</button>
       {journal.eventType === "PAYROLL_SETTLEMENT" && <button type="button" onClick={() => void start("replace")} className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-700">Điều chỉnh phiếu lương</button>}
-    </div>
+    </div></div>
     <SideDrawer open={open !== null} title={open === "replace" ? "Đảo và thay thế phiếu lương" : "Đảo toàn phần nghiệp vụ"} onClose={() => { if (!busy) setOpen(null); }}
       description="Hệ thống tạo hồ sơ đảo liên kết với bản gốc và cập nhật tiền, công nợ, ngân sách tương ứng trong cùng thao tác."
       footer={<button disabled={busy} onClick={() => void submit()} className="w-full rounded-xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy ? "Đang xử lý…" : "Xác nhận thực hiện"}</button>}>

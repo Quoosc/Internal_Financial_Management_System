@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ApiError, api } from "@/lib/api-client";
 import { useToast } from "@/contexts/toast-context";
 import { formatCurrency, formatDateTime } from "@/lib/format";
+import { withLedgerReturnTo } from "@/lib/ledger-navigation";
 import {
   AccountantWalletTransactionResponse,
   AccountingJournalEvent,
@@ -152,8 +153,10 @@ export default function AccountantLedgerPage() {
   useEffect(() => {
     if (!ready) return;
     const params = new URLSearchParams({ tab, page: String(page) });
-    Object.entries({ search, type, status, referenceType, event, from, to, employeeId: journalEmployeeId,
-      projectId: journalProjectId, requestId: journalRequestId }).forEach(([key, value]) => { if (value) params.set(key, value); });
+    const activeFilters = tab === "wallet" ? { type, status, referenceType, from, to }
+      : tab === "journal" ? { event, from, to, employeeId: journalEmployeeId, projectId: journalProjectId, requestId: journalRequestId }
+      : { search };
+    Object.entries(activeFilters).forEach(([key, value]) => { if (value) params.set(key, value); });
     window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params}`);
   }, [ready, tab, page, search, type, status, referenceType, event, from, to, journalEmployeeId, journalProjectId, journalRequestId]);
   const [walletSummary, setWalletSummary] = useState<LedgerSummaryResponse | null>(null);
@@ -170,7 +173,7 @@ export default function AccountantLedgerPage() {
     const epoch = ++requestEpoch.current;
     setLoading(true); setLoadError(null); setTotal(0); setTotalPages(1);
     setWalletSummary(null); setWalletRows([]); setJournalRows([]); setAdvanceRows([]); setBudgetRows([]);
-    const filters = { type, status, referenceType, event, from, to };
+    const filters = { type, status, referenceType, event: "", from, to };
     try {
       const query = addFilters(new URLSearchParams(), filters);
       query.set("page", String(page));
@@ -196,7 +199,7 @@ export default function AccountantLedgerPage() {
     } finally {
       if (epoch === requestEpoch.current) setLoading(false);
     }
-  }, [event, from, page, referenceType, status, to, toast, type]);
+  }, [from, page, referenceType, status, to, toast, type]);
 
   const loadJournals = useCallback(async () => {
     const epoch = ++requestEpoch.current;
@@ -277,9 +280,11 @@ export default function AccountantLedgerPage() {
     setPage(1);
     setTab(next);
   };
+  const openDetail = (path: string) => router.push(withLedgerReturnTo(path, `${window.location.pathname}${window.location.search}`));
   const totalDebit = useMemo(() => journalRows.reduce((sum, row) => sum + row.totalAmount, 0), [journalRows]);
   const balancedCount = useMemo(() => journalRows.filter((row) => row.balanced).length, [journalRows]);
   const totalOutstanding = useMemo(() => advanceRows.reduce((sum, row) => sum + row.totalRemaining, 0), [advanceRows]);
+  const totalAdvanceDisbursed = useMemo(() => advanceRows.reduce((sum, row) => sum + row.totalDisbursed, 0), [advanceRows]);
   const currentRows = tab === "wallet" ? walletRows : tab === "journal" ? journalRows : [];
 
   return (
@@ -298,20 +303,22 @@ export default function AccountantLedgerPage() {
         </div>
       </section>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-        <TabButton active={tab === "wallet"} onClick={() => setTabAndReset("wallet")}>Giao dịch ví</TabButton>
-        <TabButton active={tab === "journal"} onClick={() => setTabAndReset("journal")}>Sổ cái kế toán</TabButton>
-        <button
-          type="button"
-          onClick={() => setTabAndReset("advances")}
-          title="Tạm ứng còn phải quyết toán theo nhân viên"
-          aria-label="Tạm ứng còn phải quyết toán theo nhân viên"
-          className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border transition ${tab === "advances" ? "border-blue-600 bg-blue-600 text-white shadow-sm" : "border-slate-200 bg-white text-slate-700 hover:bg-blue-50 hover:text-blue-700"}`}
-        >
-          <AdvanceIcon />
-          <span className="sr-only">Tạm ứng còn phải quyết toán</span>
-        </button>
-      </div>
+      <nav aria-label="Các sổ kế toán" className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:grid-cols-3">
+        <TabButton active={tab === "wallet"} onClick={() => setTabAndReset("wallet")} tone="green">
+          <span className="flex items-center gap-3"><span className={`grid h-10 w-10 place-items-center rounded-xl ${tab === "wallet" ? "bg-white/15 text-white" : "bg-emerald-50 text-emerald-700"}`}><WalletIcon /></span><span className="text-left"><span className="block">Giao dịch ví</span><span className={`mt-0.5 block text-xs font-normal ${tab === "wallet" ? "text-emerald-50" : "text-slate-500"}`}>Tiền thực tế di chuyển giữa các ví</span></span></span>
+        </TabButton>
+        <TabButton active={tab === "journal"} onClick={() => setTabAndReset("journal")} tone="blue">
+          <span className="flex items-center gap-3"><span className={`grid h-10 w-10 place-items-center rounded-xl ${tab === "journal" ? "bg-white/15 text-white" : "bg-blue-50 text-blue-700"}`}><JournalIcon /></span><span className="text-left"><span className="block">Sổ cái kế toán</span><span className={`mt-0.5 block text-xs font-normal ${tab === "journal" ? "text-blue-50" : "text-slate-500"}`}>Bút toán và tài khoản kế toán</span></span></span>
+        </TabButton>
+        <TabButton active={tab === "advances"} onClick={() => setTabAndReset("advances")} tone="amber">
+          <span className="flex items-center gap-3"><span className={`grid h-10 w-10 place-items-center rounded-xl ${tab === "advances" ? "bg-white/15 text-white" : "bg-amber-50 text-amber-700"}`}><AdvanceIcon /></span><span className="text-left"><span className="block">Tạm ứng cần quyết toán</span><span className={`mt-0.5 block text-xs font-normal ${tab === "advances" ? "text-amber-50" : "text-slate-500"}`}>Theo dõi số còn lại theo nhân viên</span></span></span>
+        </TabButton>
+      </nav>
+
+      {(tab === "wallet" || tab === "journal") && <div className={`flex items-start gap-3 rounded-2xl border p-4 ${tab === "wallet" ? "border-emerald-200 bg-emerald-50/70 text-emerald-950" : "border-blue-200 bg-blue-50/70 text-blue-950"}`}>
+        <span className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg ${tab === "wallet" ? "bg-white text-emerald-700" : "bg-white text-blue-700"}`}>{tab === "wallet" ? <WalletIcon /> : <JournalIcon />}</span>
+        <div><p className="text-sm font-bold">{tab === "wallet" ? "Đang xem dòng tiền thực tế" : "Đang xem ghi nhận kế toán"}</p><p className="mt-1 text-xs leading-5 text-slate-700">{tab === "wallet" ? "Mỗi dòng là một giao dịch ví. Chọn “Xem chi tiết” để biết ví nào tăng/giảm, số dư trước–sau và bút toán liên quan nếu có." : "Mỗi dòng là một bút toán kế toán. Mở chi tiết để xem từng tài khoản, số tiền ghi nhận, nguồn nghiệp vụ và trạng thái cân bằng. Một bút toán không đồng nghĩa một lần chuyển ví."}</p></div>
+      </div>}
 
       {(tab === "advances" || tab === "budget") && <label className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-5 text-xs text-slate-500">{tab === "advances" ? "Tìm tên nhân viên" : "Tìm tên hoặc mã dự án"}<input value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} className="h-11 rounded-xl border border-slate-200 px-3 text-sm"/></label>}
       {(tab === "wallet" || tab === "journal") && <FilterPanel
@@ -333,21 +340,22 @@ export default function AccountantLedgerPage() {
           <MetricCard label="Tiền ra quỹ công ty" value={walletSummary ? formatCurrency(walletSummary.totalOutflow) : "?"} note="Theo bộ lọc đang chọn; chỉ tính biến động của quỹ công ty." tone="rose" />
         </div>
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <SectionHeading title="Giao dịch ví" subtitle="Một giao dịch chỉ xuất hiện một lần. Chọn dòng để xem số dư trước và sau ở từng ví." />
+          <SectionHeading title="Danh sách giao dịch ví" subtitle="Một dòng cho một giao dịch. Các ví bị tác động được gom trong cùng dòng để dễ lần theo." badge={`${total} giao dịch`} />
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[850px] text-left">
-              <thead className="bg-blue-50/70 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                <tr><th className="px-5 py-3">Mã giao dịch</th><th className="px-5 py-3">Nghiệp vụ</th><th className="px-5 py-3">Ví liên quan</th><th className="px-5 py-3 text-right">Số tiền</th><th className="px-5 py-3">Trạng thái</th><th className="px-5 py-3">Thời gian</th></tr>
+            <table className="w-full min-w-[1050px] text-left">
+              <thead className="bg-emerald-50/80 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                <tr><th className="px-5 py-3">Mã giao dịch</th><th className="px-5 py-3">Nghiệp vụ</th><th className="px-5 py-3">Ví liên quan</th><th className="px-5 py-3 text-right">Số tiền</th><th className="px-5 py-3">Trạng thái</th><th className="px-5 py-3">Thời gian</th><th className="px-5 py-3 text-right">Thao tác</th></tr>
               </thead>
               <tbody>
-                {loading ? <LoadingRow columns={6} /> : walletRows.length === 0 ? <EmptyRow columns={6} text="Không có giao dịch phù hợp với bộ lọc." /> : walletRows.map((row) => (
-                  <tr key={row.id} tabIndex={0} onClick={() => router.push(`/accountant/ledger/${row.id}`)} onKeyDown={(e) => e.key === "Enter" && router.push(`/accountant/ledger/${row.id}`)} className="cursor-pointer border-t border-slate-100 hover:bg-blue-50/60">
+                {loading ? <LoadingRow columns={7} /> : walletRows.length === 0 ? <EmptyRow columns={7} text="Không có giao dịch phù hợp với bộ lọc." /> : walletRows.map((row) => (
+                  <tr key={row.id} className="border-t border-slate-100 transition hover:bg-emerald-50/40">
                     <td className="px-5 py-4"><span className="font-mono text-xs font-semibold text-blue-700">{row.transactionCode}</span><p className="mt-1 max-w-64 truncate text-xs text-slate-500">{row.description || "Không có mô tả"}</p></td>
                     <td className="px-5 py-4"><span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${typeColor(row.type)}`}>{transactionLabels[row.type] ?? row.type}</span><p className="mt-1 text-[11px] text-slate-400">{row.referenceType ? `${referenceLabels[row.referenceType] ?? row.referenceType} · #${row.referenceId ?? "—"}` : "Không có tham chiếu"}</p></td>
                     <td className="px-5 py-4"><div className="flex flex-wrap gap-1.5">{row.walletMovements.map((movement) => <span key={movement.id} className="rounded-lg bg-slate-100 px-2 py-1 text-[11px] text-slate-600">{walletOwnerLabel(movement.walletOwnerType, movement.walletOwnerId)}</span>)}</div></td>
                     <td className="px-5 py-4 text-right text-sm font-bold text-slate-900">{formatCurrency(row.amount)}</td>
                     <td className="px-5 py-4"><StatusBadge variant={row.status === "SUCCESS" ? "emerald" : row.status === "PENDING" ? "amber" : row.status === "FAILED" ? "rose" : "slate"} label={statusLabel(row.status)} /></td>
                     <td className="px-5 py-4 whitespace-nowrap text-xs text-slate-600">{formatDateTime(row.timestamp)}</td>
+                    <td className="px-5 py-4 text-right"><button type="button" onClick={() => openDetail(`/accountant/ledger/${row.id}`)} className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100">Xem chi tiết <span aria-hidden="true">→</span></button></td>
                   </tr>
                 ))}
               </tbody>
@@ -360,22 +368,23 @@ export default function AccountantLedgerPage() {
       {!loadError && tab === "journal" && <>
         <div className="grid gap-3 sm:grid-cols-3">
           <MetricCard label="Bút toán trong kết quả" value={String(total)} note="Mỗi bút toán gắn với một sự kiện nghiệp vụ cụ thể." tone="blue" />
-          <MetricCard label="Giá trị bút toán ở trang này" value={formatCurrency(totalDebit)} note="Cộng các dòng bút toán ở trang hiện tại." tone="green" />
+          <MetricCard label="Giá trị ghi nhận · trang hiện tại" value={formatCurrency(totalDebit)} note="Tổng giá trị mỗi bút toán một lần; không cộng cả hai phía ghi sổ." tone="green" />
           <MetricCard label="Bút toán cân bằng" value={`${balancedCount} / ${journalRows.length}`} note="So sánh hai phía của từng bút toán đang hiển thị." tone="slate" />
         </div>
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <SectionHeading title="Sổ cái kế toán" subtitle="Các dòng tác động lên tài khoản kế toán; khác với dòng biến động số dư ví." />
+          <SectionHeading title="Danh sách bút toán kế toán" subtitle="Bút toán ghi nhận nghiệp vụ vào các tài khoản kế toán; đây không phải danh sách từng lần ví tăng hoặc giảm." badge={`${total} bút toán`} />
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[780px] text-left">
-              <thead className="bg-blue-50/70 text-[10px] font-bold uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Mã và ngày ghi sổ</th><th className="px-5 py-3">Nghiệp vụ · nguồn</th><th className="px-5 py-3">Nhân viên / dự án</th><th className="px-5 py-3 text-right">Số tiền</th><th className="px-5 py-3 text-right">Đối chiếu</th></tr></thead>
+            <table className="w-full min-w-[980px] text-left">
+              <thead className="bg-blue-50/70 text-[10px] font-bold uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Mã và ngày ghi sổ</th><th className="px-5 py-3">Nghiệp vụ · nguồn</th><th className="px-5 py-3">Nhân viên / dự án</th><th className="px-5 py-3 text-right">Giá trị ghi nhận</th><th className="px-5 py-3 text-center">Cân bằng</th><th className="px-5 py-3 text-right">Thao tác</th></tr></thead>
               <tbody>
-                {loading ? <LoadingRow columns={5} /> : journalRows.length === 0 ? <EmptyRow columns={5} text="Chưa có bút toán kế toán khớp với bộ lọc." /> : journalRows.map((row) => (
-                  <tr key={row.id} tabIndex={0} onClick={() => router.push(`/accountant/ledger/journals/${row.id}`)} onKeyDown={(e) => e.key === "Enter" && router.push(`/accountant/ledger/journals/${row.id}`)} className="cursor-pointer border-t border-slate-100 hover:bg-blue-50/60">
+                {loading ? <LoadingRow columns={6} /> : journalRows.length === 0 ? <EmptyRow columns={6} text="Chưa có bút toán kế toán khớp với bộ lọc." /> : journalRows.map((row) => (
+                  <tr key={row.id} className="border-t border-slate-100 transition hover:bg-blue-50/50">
                     <td className="px-5 py-4"><span className="font-mono text-xs font-semibold text-blue-700">{row.journalCode}</span><p className="mt-1 text-xs text-slate-500">{row.postingDate} · kỳ {row.postingPeriod}</p><p className="mt-1 text-[11px] text-slate-400">Tạo bởi {row.createdByName || "Dữ liệu cũ"}</p></td>
                     <td className="px-5 py-4"><span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${typeColor(row.eventType)}`}>{eventLabels[row.eventType]}</span><p className="mt-1 max-w-72 truncate text-xs text-slate-500">{row.description}</p></td>
                     <td className="px-5 py-4 text-xs text-slate-600">{row.employeeName || "—"}<p className="mt-1 text-slate-400">{row.projectName || "Không gắn dự án"}</p></td>
                     <td className="px-5 py-4 text-right text-sm font-bold text-slate-900">{formatCurrency(row.totalAmount)}</td>
-                    <td className="px-5 py-4 text-right"><BalanceBadge balanced={row.balanced} /></td>
+                    <td className="px-5 py-4 text-center"><BalanceBadge balanced={row.balanced} /></td>
+                    <td className="px-5 py-4 text-right"><button type="button" onClick={() => openDetail(`/accountant/ledger/journals/${row.id}`)} className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-800 transition hover:bg-blue-100">Mở bút toán <span aria-hidden="true">→</span></button></td>
                   </tr>
                 ))}
               </tbody>
@@ -385,7 +394,13 @@ export default function AccountantLedgerPage() {
         </section>
       </>}
 
-      {!loadError && tab === "advances" && <section className="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm">
+      {!loadError && tab === "advances" && <>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <MetricCard label="Nhân viên còn tạm ứng" value={String(total)} note="Tổng nhân viên theo điều kiện tìm kiếm." tone="blue" />
+        <MetricCard label="Đã giải ngân · trang hiện tại" value={formatCurrency(totalAdvanceDisbursed)} note="Tổng tiền đã ứng cho các nhân viên trên trang này." tone="slate" />
+        <MetricCard label="Còn phải quyết toán · trang hiện tại" value={formatCurrency(totalOutstanding)} note="Giảm khi chứng từ được duyệt, nhân viên hoàn tiền hoặc khấu trừ qua lương." tone="rose" />
+      </div>
+      <section className="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm">
         <SectionHeading title="Tạm ứng còn phải quyết toán theo nhân viên" subtitle="Mỗi dòng là một nhân viên. Mở rộng để xem từng khoản tạm ứng, chứng từ đã xác nhận, tiền hoàn thật và phần bù trừ lương." badge={`${total} nhân viên`} amber />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[740px] text-left">
@@ -399,16 +414,17 @@ export default function AccountantLedgerPage() {
                     <td className="px-5 py-4 text-sm text-slate-700">{employee.openAdvanceCount} khoản</td>
                     <td className="px-5 py-4 text-right text-sm text-slate-700">{formatCurrency(employee.totalDisbursed)}</td>
                     <td className="px-5 py-4 text-right text-sm font-bold text-amber-800">{formatCurrency(employee.totalRemaining)}</td>
-                    <td className="px-5 py-4 text-right"><button type="button" onClick={() => setExpandedEmployee(expanded ? null : employee.employeeId)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">{expanded ? "Thu gọn" : "Mở"}</button></td>
+                    <td className="px-5 py-4 text-right"><button type="button" aria-expanded={expanded} onClick={() => setExpandedEmployee(expanded ? null : employee.employeeId)} className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-50">{expanded ? "Thu gọn ↑" : "Xem các khoản ↓"}</button></td>
                   </tr>
-                  {expanded && <tr className="border-t border-amber-100 bg-amber-50/30"><td colSpan={5} className="p-4 sm:p-5"><div className="space-y-4">{employee.advances.map((advance) => <AdvanceDetailCard key={advance.id} advance={advance} onOpenJournal={(journalId) => router.push(`/accountant/ledger/journals/${journalId}`)} />)}</div></td></tr>}
+                  {expanded && <tr className="border-t border-amber-100 bg-amber-50/30"><td colSpan={5} className="p-4 sm:p-5"><div className="space-y-4">{employee.advances.map((advance) => <AdvanceDetailCard key={advance.id} advance={advance} onOpenJournal={(journalId) => openDetail(`/accountant/ledger/journals/${journalId}`)} onOpenRequest={(requestId) => openDetail(`/accountant/ledger/sources/requests/${requestId}`)} />)}</div></td></tr>}
                 </React.Fragment>;
               })}
             </tbody>
           </table>
         </div>
         {!loading && advanceRows.length > 0 && <div className="border-t border-amber-100 bg-amber-50/50 px-5 py-3 text-sm text-slate-600">Tổng dư tạm ứng trên trang này: <strong className="text-amber-800">{formatCurrency(totalOutstanding)}</strong></div>}
-      </section>}
+      </section>
+      </>}
 
       {!loadError && tab === "budget" && <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <SectionHeading title="Theo dõi ngân sách theo dự án" subtitle="Xem riêng chi phí đã xác nhận, tiền đang khóa cho yêu cầu và tạm ứng còn mở; các khoản này không cộng chồng lên nhau." badge={`${total} dự án`} />
@@ -439,12 +455,22 @@ export default function AccountantLedgerPage() {
   );
 }
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" onClick={onClick} className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${active ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:bg-blue-50 hover:text-blue-700"}`}>{children}</button>;
+function TabButton({ active, onClick, children, tone }: { active: boolean; onClick: () => void; children: React.ReactNode; tone: "green" | "blue" | "amber" }) {
+  const activeClass = { green: "bg-emerald-700 text-white shadow-sm", blue: "bg-blue-700 text-white shadow-sm", amber: "bg-amber-700 text-white shadow-sm" }[tone];
+  const hoverClass = { green: "hover:bg-emerald-50", blue: "hover:bg-blue-50", amber: "hover:bg-amber-50" }[tone];
+  return <button type="button" aria-pressed={active} onClick={onClick} className={`rounded-xl px-3 py-3 text-sm font-semibold transition sm:px-4 ${active ? activeClass : `text-slate-700 ${hoverClass}`}`}>{children}</button>;
 }
 
 function AdvanceIcon() {
   return <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3.5 19 7v5.5c0 4.2-2.9 7-7 8-4.1-1-7-3.8-7-8V7l7-3.5Z"/><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-3-3v6"/></svg>;
+}
+
+function WalletIcon() {
+  return <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="5" width="18" height="15" rx="2.5"/><path strokeLinecap="round" d="M3 9h18M16 14h2"/><path strokeLinecap="round" strokeLinejoin="round" d="M6 5V3.5h12V5"/></svg>;
+}
+
+function JournalIcon() {
+  return <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M6 3.5h9l4 4V21H6a2 2 0 0 1-2-2V5.5a2 2 0 0 1 2-2Z"/><path strokeLinecap="round" strokeLinejoin="round" d="M14 3.5V8h5M8 12h8M8 16h8"/></svg>;
 }
 
 function FilterPanel(props: {
@@ -454,32 +480,61 @@ function FilterPanel(props: {
   requestId: string; setRequestId: (v: string) => void;
   from: string; setFrom: (v: string) => void; to: string; setTo: (v: string) => void; onFilter: () => void;
 }) {
-  return <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-    <div className="mb-3"><h2 className="text-sm font-bold text-slate-900">Bộ lọc {props.tab === "wallet" ? "giao dịch ví" : "bút toán"}</h2><p className="mt-1 text-xs text-slate-500">Các chỉ số cùng loại nghiệp vụ và khoảng thời gian đang chọn.</p></div>
-    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-      {props.tab === "wallet" ? <>
-        <Select value={props.type} onChange={(e) => { props.setType(e.target.value); props.onFilter(); }}><option value="">Tất cả nghiệp vụ</option>{transactionTypes.map((value) => <option key={value} value={value}>{transactionLabels[value] ?? value}</option>)}</Select>
-        <Select value={props.status} onChange={(e) => { props.setStatus(e.target.value); props.onFilter(); }}><option value="">Tất cả trạng thái</option>{transactionStatuses.map((value) => <option key={value} value={value}>{statusLabel(value)}</option>)}</Select>
-        <Select value={props.referenceType} onChange={(e) => { props.setReferenceType(e.target.value); props.onFilter(); }}><option value="">Tất cả nguồn</option>{referenceTypes.map((value) => <option key={value} value={value}>{referenceLabels[value] ?? value}</option>)}</Select>
-      </> : <>
-        <Select value={props.event} onChange={(e) => { props.setEvent(e.target.value); props.onFilter(); }}><option value="">Tất cả bút toán</option>{journalEvents.map((value) => <option key={value} value={value}>{eventLabels[value]}</option>)}</Select>
-        <ReferencePicker kind="employee" label="Nhân viên" value={props.employeeId} onChange={v=>{props.setEmployeeId(v);props.onFilter();}}/>
-        <ReferencePicker kind="project" label="Dự án" value={props.projectId} onChange={v=>{props.setProjectId(v);props.onFilter();}}/>
-        <ReferencePicker kind="request" label="Yêu cầu" value={props.requestId} onChange={v=>{props.setRequestId(v);props.onFilter();}}/>
-      </>}
-      <input type="date" value={props.from} onChange={(e) => { props.setFrom(e.target.value); props.onFilter(); }} className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" aria-label="Từ ngày" />
-      <input type="date" value={props.to} onChange={(e) => { props.setTo(e.target.value); props.onFilter(); }} className="h-11 rounded-xl border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" aria-label="Đến ngày" />
+  const isWallet = props.tab === "wallet";
+  const selectedCount = (isWallet
+    ? [props.type, props.status, props.referenceType, props.from, props.to]
+    : [props.event, props.employeeId, props.projectId, props.requestId, props.from, props.to]).filter(Boolean).length;
+  const clearFilters = () => {
+    if (isWallet) {
+      props.setType(""); props.setStatus(""); props.setReferenceType("");
+    } else {
+      props.setEvent(""); props.setEmployeeId(""); props.setProjectId(""); props.setRequestId("");
+    }
+    props.setFrom(""); props.setTo(""); props.onFilter();
+  };
+  const dateClass = "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
+  return <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-4">
+      <div><h2 className="text-base font-bold text-slate-900">Bộ lọc {isWallet ? "giao dịch ví" : "bút toán kế toán"}</h2><p className="mt-1 text-xs text-slate-600">Danh sách tự cập nhật khi thay đổi điều kiện.</p></div>
+      <div className="flex items-center gap-2"><span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{selectedCount ? `${selectedCount} điều kiện đang chọn` : "Đang xem tất cả"}</span><button type="button" onClick={clearFilters} disabled={selectedCount === 0} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">Xóa bộ lọc</button></div>
+    </div>
+    <div className="space-y-5 p-5">
+      <div><p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">{isWallet ? "Phân loại giao dịch" : "Nghiệp vụ và đối tượng liên quan"}</p>
+        <div className={`grid gap-3 sm:grid-cols-2 ${isWallet ? "xl:grid-cols-3" : "xl:grid-cols-4"}`}>
+          {isWallet ? <>
+            <label className="grid gap-1.5 text-xs font-medium text-slate-600">Nghiệp vụ<Select value={props.type} onChange={(e) => { props.setType(e.target.value); props.onFilter(); }}><option value="">Tất cả nghiệp vụ</option>{transactionTypes.map((value) => <option key={value} value={value}>{transactionLabels[value] ?? value}</option>)}</Select></label>
+            <label className="grid gap-1.5 text-xs font-medium text-slate-600">Trạng thái<Select value={props.status} onChange={(e) => { props.setStatus(e.target.value); props.onFilter(); }}><option value="">Tất cả trạng thái</option>{transactionStatuses.map((value) => <option key={value} value={value}>{statusLabel(value)}</option>)}</Select></label>
+            <label className="grid gap-1.5 text-xs font-medium text-slate-600">Nguồn tham chiếu<Select value={props.referenceType} onChange={(e) => { props.setReferenceType(e.target.value); props.onFilter(); }}><option value="">Tất cả nguồn</option>{referenceTypes.map((value) => <option key={value} value={value}>{referenceLabels[value] ?? value}</option>)}</Select></label>
+          </> : <>
+            <label className="grid gap-1.5 text-xs font-medium text-slate-600">Loại bút toán<Select value={props.event} onChange={(e) => { props.setEvent(e.target.value); props.onFilter(); }}><option value="">Tất cả bút toán</option>{journalEvents.map((value) => <option key={value} value={value}>{eventLabels[value]}</option>)}</Select></label>
+            <ReferencePicker kind="employee" label="Nhân viên" value={props.employeeId} onChange={v=>{props.setEmployeeId(v);props.onFilter();}}/>
+            <ReferencePicker kind="project" label="Dự án" value={props.projectId} onChange={v=>{props.setProjectId(v);props.onFilter();}}/>
+            <ReferencePicker kind="request" label="Yêu cầu" value={props.requestId} onChange={v=>{props.setRequestId(v);props.onFilter();}}/>
+          </>}
+        </div>
+      </div>
+      <div className="border-t border-slate-100 pt-4"><p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">{isWallet ? "Khoảng thời gian giao dịch" : "Khoảng ngày ghi sổ"}</p>
+        <div className="grid gap-3 sm:max-w-[680px] sm:grid-cols-2">
+          <label className="grid gap-1.5 text-xs font-medium text-slate-600">Từ ngày<input type="date" value={props.from} max={props.to || undefined} onChange={(e) => { props.setFrom(e.target.value); props.onFilter(); }} className={dateClass} /></label>
+          <label className="grid gap-1.5 text-xs font-medium text-slate-600">Đến ngày<input type="date" value={props.to} min={props.from || undefined} onChange={(e) => { props.setTo(e.target.value); props.onFilter(); }} className={dateClass} /></label>
+        </div>
+      </div>
     </div>
   </section>;
 }
 
 function Select({ value, onChange, children }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select value={value} onChange={onChange} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">{children}</select>;
+  return <select value={value} onChange={onChange} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">{children}</select>;
 }
 
 function MetricCard({ label, value, note, tone }: { label: string; value: string; note: string; tone: "blue" | "green" | "rose" | "slate" }) {
-  const valueColor = { blue: "text-blue-700", green: "text-emerald-700", rose: "text-rose-700", slate: "text-slate-900" }[tone];
-  return <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-xs text-slate-500">{label}</p><p className={`mt-1 text-xl font-bold ${valueColor}`}>{value}</p><p className="mt-2 text-[11px] leading-4 text-slate-500">{note}</p></div>;
+  const styles = {
+    blue: { line: "bg-blue-600", value: "text-blue-800", surface: "bg-blue-50/40" },
+    green: { line: "bg-emerald-500", value: "text-emerald-800", surface: "bg-emerald-50/40" },
+    rose: { line: "bg-rose-500", value: "text-rose-700", surface: "bg-rose-50/40" },
+    slate: { line: "bg-slate-400", value: "text-slate-900", surface: "bg-white" },
+  }[tone];
+  return <div className={`overflow-hidden rounded-2xl border border-slate-200 ${styles.surface} shadow-sm`}><div className={`h-1 ${styles.line}`} /><div className="p-4"><p className="text-xs font-medium text-slate-500">{label}</p><p className={`mt-1 text-xl font-bold ${styles.value}`}>{value}</p><p className="mt-2 text-[11px] leading-4 text-slate-500">{note}</p></div></div>;
 }
 
 function BudgetMetric({ label, value, tone }: { label: string; value: number; tone: "blue" | "amber" | "rose" | "slate" }) {
@@ -507,7 +562,7 @@ function Pagination({ page, totalPages, total, onPage }: { page: number; totalPa
   return <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3"><p className="text-xs text-slate-500">Trang {page}/{totalPages} · {total} kết quả</p><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => onPage(page - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-40">Trước</button><button type="button" disabled={page >= totalPages} onClick={() => onPage(page + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-40">Sau</button></div></div>;
 }
 
-function AdvanceDetailCard({ advance, onOpenJournal }: { advance: AdvanceEmployeeSummary["advances"][number]; onOpenJournal: (journalId: number) => void }) {
+function AdvanceDetailCard({ advance, onOpenJournal, onOpenRequest }: { advance: AdvanceEmployeeSummary["advances"][number]; onOpenJournal: (journalId: number) => void; onOpenRequest: (requestId: number) => void }) {
   const accountedLegacy = advance.legacyUnclassifiedAmount ?? 0;
   return <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-mono text-xs font-bold text-blue-700">{advance.requestCode} · Khoản #{advance.id}</p><p className="mt-1 text-sm font-semibold text-slate-900">{advance.projectName || "Chưa gắn dự án"}</p><p className="mt-1 text-xs text-slate-500">{advance.phaseName || "—"} · {advance.categoryName || "Chưa phân loại"} · Giải ngân {advance.disbursedDate || "—"}</p></div><span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">Còn {formatCurrency(advance.remainingAmount)}</span></div>
@@ -519,7 +574,7 @@ function AdvanceDetailCard({ advance, onOpenJournal }: { advance: AdvanceEmploye
       <SettlementMetric label="Khoản cũ chưa phân loại" amount={accountedLegacy} color="text-orange-700" />
     </div>
     <p className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-xs leading-5 text-slate-700">{formatCurrency(advance.originalAmount)} đã giải ngân − {formatCurrency(advance.reimbursedAmount)} chứng từ − {formatCurrency(advance.cashReturnedAmount)} hoàn thật − {formatCurrency(advance.payrollOffsetAmount)} khấu trừ lương − {formatCurrency(accountedLegacy)} khoản lịch sử chưa phân loại = <strong className="text-amber-800">{formatCurrency(advance.remainingAmount)} còn phải quyết toán</strong>.</p>
-    <div className="mt-4"><h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Lịch sử bút toán của khoản này</h3>{advance.activities.length === 0 ? <p className="mt-2 text-xs text-slate-500">Chưa có journal kế toán mới. Khoản có thể được tạo trước khi hệ thống ghi journal được triển khai.</p> : <div className="mt-2 flex flex-wrap gap-2">{advance.activities.map((activity) => <button key={activity.journalId} type="button" onClick={() => onOpenJournal(activity.journalId)} className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-left text-xs font-semibold text-blue-700 hover:bg-blue-100"><span>{eventLabels[activity.eventType]}</span><span className="ml-2 font-mono">{activity.journalCode}</span><span className="ml-2 font-normal text-slate-500">{formatCurrency(activity.amount)}</span></button>)}</div>}</div>
+    <div className="mt-4 border-t border-slate-100 pt-4"><h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Hồ sơ và lịch sử ghi sổ</h3><div className="mt-2 flex flex-wrap gap-2">{advance.requestId && <button type="button" onClick={() => onOpenRequest(advance.requestId!)} className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800 hover:bg-violet-100">Xem yêu cầu và chứng từ {advance.requestCode} →</button>}{advance.activities.map((activity) => <button key={activity.journalId} type="button" onClick={() => onOpenJournal(activity.journalId)} className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-left text-xs font-semibold text-blue-700 hover:bg-blue-100"><span>{eventLabels[activity.eventType]}</span><span className="ml-2 font-mono">{activity.journalCode}</span><span className="ml-2 font-normal text-slate-500">{formatCurrency(activity.amount)}</span></button>)}</div>{advance.activities.length === 0 && <p className="mt-2 text-xs text-slate-500">Chưa có bút toán kế toán liên kết; hãy xem hồ sơ nguồn trước khi kết luận khoản này đã được ghi sổ.</p>}</div>
   </article>;
 }
 

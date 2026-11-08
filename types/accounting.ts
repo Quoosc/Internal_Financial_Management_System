@@ -370,6 +370,7 @@ export interface AdvanceActivity {
 export interface AdvanceBalanceDetail {
   id: number;
   requestCode: string;
+  requestId?: number | null;
   disbursedDate: string | null;
   projectId: number | null;
   projectName: string | null;
